@@ -37,7 +37,25 @@ def check_java():
 def check_maven():
     """检查Maven"""
     print("[INFO] 检查Maven...")
+    
+    # 首先尝试直接运行mvn命令
     success, stdout, stderr = run_command("mvn -version", "Maven版本检查")
+    
+    # 如果失败，尝试使用常见路径
+    if not success:
+        maven_paths = [
+            r"E:\software\apache-maven-3.9.11-bin\apache-maven-3.9.11\bin\mvn.cmd",
+            r"C:\Program Files\Apache\maven\bin\mvn.cmd",
+            r"C:\apache-maven\bin\mvn.cmd"
+        ]
+        
+        for mvn_path in maven_paths:
+            if os.path.exists(mvn_path):
+                print(f"[INFO] 找到Maven: {mvn_path}")
+                success, stdout, stderr = run_command(f'"{mvn_path}" -version', "Maven版本检查")
+                if success:
+                    break
+    
     if success:
         version_line = stdout.split('\n')[0] if stdout else ""
         print(f"[OK] Maven: {version_line}")
@@ -45,6 +63,7 @@ def check_maven():
     else:
         print("[ERROR] Maven未安装或配置不正确")
         print("   请安装Maven 3.6+: https://maven.apache.org/download.cgi")
+        print("   或运行 dep/setup_maven_env.ps1 配置环境变量（需要管理员权限）")
         return False
 
 def check_python():
@@ -84,13 +103,32 @@ def check_mysql():
 
         # 检查服务是否运行
         if platform.system() == "Windows":
-            success, stdout, stderr = run_command("sc query MySQL80", "MySQL服务状态")
-            if "RUNNING" in stdout:
-                print("[OK] MySQL服务正在运行")
-                return True
-            else:
-                print("[WARN] MySQL服务未启动，请启动MySQL80服务")
-                return False
+            # 尝试多个可能的MySQL服务名称
+            mysql_services = ["MySQL80", "MySQL", "MySQL57", "MySQLService"]
+            service_running = False
+            
+            for service_name in mysql_services:
+                success, stdout, stderr = run_command(f'sc query {service_name}', f"MySQL服务状态({service_name})")
+                if success and "RUNNING" in stdout:
+                    print(f"[OK] MySQL服务正在运行 ({service_name})")
+                    service_running = True
+                    break
+            
+            if not service_running:
+                # 尝试通过Get-Service查找
+                success, stdout, stderr = run_command('powershell -Command "Get-Service | Where-Object {$_.Name -like \'*mysql*\'} | Select-Object -First 1 Name,Status"', "查找MySQL服务")
+                if success and stdout:
+                    print(f"[INFO] 找到MySQL服务: {stdout.strip()}")
+                    if "Running" in stdout:
+                        print("[OK] MySQL服务正在运行")
+                        service_running = True
+                
+                if not service_running:
+                    print("[WARN] MySQL服务未启动")
+                    print("   请启动MySQL服务，或在服务管理器中启动MySQL")
+                    return False
+            
+            return True
         else:
             # Linux/Mac检查
             success, stdout, stderr = run_command("systemctl is-active mysql 2>/dev/null || systemctl is-active mysqld 2>/dev/null || brew services list | grep mysql", "MySQL服务状态")
@@ -113,7 +151,7 @@ def check_database_connection():
         conn = mysql.connector.connect(
             host="localhost",
             user="root",
-            password="123456",
+            password="20050129",
             database="hpims"
         )
         conn.close()
@@ -121,7 +159,7 @@ def check_database_connection():
         return True
     except ImportError:
         print("[WARN] mysql-connector-python未安装，尝试命令行连接...")
-        success, stdout, stderr = run_command('mysql -u root -p123456 -e "SELECT 1;"', "数据库连接测试")
+        success, stdout, stderr = run_command('mysql -u root -p20050129 -e "SELECT 1;"', "数据库连接测试")
         if success:
             print("[OK] 数据库连接正常")
             return True

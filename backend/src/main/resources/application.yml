@@ -11,7 +11,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/hpims?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
-    password: password
+    password: 20050129
     driver-class-name: com.mysql.cj.jdbc.Driver
     type: com.zaxxer.hikari.HikariDataSource
     hikari:

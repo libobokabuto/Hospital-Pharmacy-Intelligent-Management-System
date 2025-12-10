@@ -166,3 +166,5 @@ echo
 trap 'echo ""; echo "正在停止服务..."; kill $BACKEND_PID $FRONTEND_PID $PYTHON_PID 2>/dev/null; exit 0' INT
 wait
 
+
+
