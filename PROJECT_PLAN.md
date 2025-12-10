@@ -18,7 +18,7 @@
 ┌─────────────────────────────────────────────────┐
 │              用户界面层 (前端)                   │
 │  ┌─────────────────────────────────────────┐     │
-│  │  HTML/CSS/JavaScript + Bootstrap       │     │
+│  │  Vue3 + Element Plus + TypeScript       │     │
 │  │  - 管理员界面                          │     │
 │  │  - 医生界面                            │     │
 │  │  - 护士界面                            │     │
@@ -58,8 +58,13 @@
 ### 技术栈选型
 
 #### 前端技术栈
-- **核心技术**: HTML5, CSS3, JavaScript
-- **UI框架**: Bootstrap 5.x
+- **核心框架**: Vue.js 3.x (Composition API)
+- **路由管理**: Vue Router 4.x
+- **状态管理**: Pinia 2.x
+- **HTTP客户端**: Axios
+- **UI组件库**: Element Plus
+- **构建工具**: Vite
+- **开发语言**: TypeScript (可选)
 - **工具**: Git, 浏览器开发者工具
 
 #### Java后端技术栈 (Spring Boot)
