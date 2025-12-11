@@ -64,11 +64,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  *   - GET /audit/records, GET /audit/records/{id}
  *   - GET /audit/records/prescription/{prescriptionId}, GET /audit/statistics
  *
- * ✅ 六、DTO类 - 基础DTO已完成
+ * ✅ 六、DTO类 - 已完成
  * ✅ 请求DTO: LoginRequest, RegisterRequest, RefreshTokenRequest
+ * ✅ 请求DTO: MedicineCreateRequest, MedicineUpdateRequest, StockInRequest, StockOutRequest
+ * ✅ 请求DTO: PrescriptionCreateRequest, PrescriptionDetailRequest, PrescriptionAuditRequest
  * ✅ 响应DTO: LoginResponse, UserResponse
+ * ✅ 响应DTO: MedicineResponse, StockInResponse, StockOutResponse
+ * ✅ 响应DTO: PrescriptionResponse, PrescriptionDetailResponse, AuditRecordResponse
  * ✅ 通用DTO: ApiResponse<T>, PageResponse<T>
- * ⏳ 其他DTO: MedicineResponse, StockInResponse, StockOutResponse, PrescriptionResponse等（可选，当前直接使用Model）
  *
  * ⏳ 七、Python服务集成 - 待实现
  * ⏳ AuditServiceClient - HTTP客户端（调用Python审核服务）
