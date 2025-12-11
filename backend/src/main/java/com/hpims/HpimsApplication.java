@@ -35,14 +35,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * ✅ JwtConfig - JWT配置类
  * ✅ WebConfig - Web MVC配置
  *
- * ⏳ 四、业务逻辑层（Service）- 1个已完成，5个待实现
- * ✅ UserService - 用户业务逻辑（已完成）
- * ⏳ MedicineService - 药品业务逻辑（待实现）
- * ⏳ StockInService - 入库业务逻辑（待实现）
- * ⏳ StockOutService - 出库业务逻辑（待实现）
- * ⏳ PrescriptionService - 处方业务逻辑（待实现）
- * ⏳ PrescriptionDetailService - 处方明细业务逻辑（待实现）
- * ⏳ AuditRecordService - 审核记录业务逻辑（待实现）
+ * ✅ 四、业务逻辑层（Service）- 7个已完成
+ * ✅ UserService - 用户业务逻辑
+ * ✅ MedicineService - 药品业务逻辑
+ * ✅ StockInService - 入库业务逻辑
+ * ✅ StockOutService - 出库业务逻辑
+ * ✅ PrescriptionService - 处方业务逻辑
+ * ✅ PrescriptionDetailService - 处方明细业务逻辑
+ * ✅ AuditRecordService - 审核记录业务逻辑
  *
  * ⏳ 五、控制器层（Controller）- 6个待实现
  * ⏳ AuthController - 用户认证API

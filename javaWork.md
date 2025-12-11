@@ -49,76 +49,105 @@
 
 ### 二、数据访问层（Repository）- 6 个 Repository
 
-#### 1. MedicineRepository
-- 方法：findByName, findByCategory, findByManufacturer, findByNameContaining
-
-#### 2. StockInRepository
-- 方法：findByMedicineId, findByInDateBetween, findByOperator
-
-#### 3. StockOutRepository
-- 方法：findByMedicineId, findByOutDateBetween, findByReason
-
-#### 4. PrescriptionRepository
-- 方法：findByPrescriptionNumber, findByStatus, findByPatientName, findByDoctorName, findByCreateDateBetween
-
-#### 5. PrescriptionDetailRepository
-- 方法：findByPrescriptionId, findByMedicineId
-
-#### 6. AuditRecordRepository
-- 方法：findByPrescriptionId, findByAuditResult, findByAuditTimeBetween
+1. MedicineRepository.java - 药品数据访问接口
+Optional<Medicine> findByName(String name) - 根据药品名称查找
+List<Medicine> findByCategory(String category) - 根据分类查找
+List<Medicine> findByManufacturer(String manufacturer) - 根据生产厂家查找
+List<Medicine> findByNameContaining(String name) - 根据药品名称模糊查询
+2. StockInRepository.java - 入库记录数据访问接口
+List<StockIn> findByMedicineId(Long medicineId) - 根据药品ID查找
+List<StockIn> findByInDateBetween(LocalDate startDate, LocalDate endDate) - 根据入库日期范围查找
+List<StockIn> findByOperator(String operator) - 根据操作员查找
+3. StockOutRepository.java - 出库记录数据访问接口
+List<StockOut> findByMedicineId(Long medicineId) - 根据药品ID查找
+List<StockOut> findByOutDateBetween(LocalDate startDate, LocalDate endDate) - 根据出库日期范围查找
+List<StockOut> findByReason(String reason) - 根据出库原因查找
+4. PrescriptionRepository.java - 处方数据访问接口
+Optional<Prescription> findByPrescriptionNumber(String prescriptionNumber) - 根据处方号查找
+List<Prescription> findByStatus(String status) - 根据状态查找
+List<Prescription> findByPatientName(String patientName) - 根据患者姓名查找
+List<Prescription> findByDoctorName(String doctorName) - 根据医生姓名查找
+List<Prescription> findByCreateDateBetween(LocalDate startDate, LocalDate endDate) - 根据创建日期范围查找
+5. PrescriptionDetailRepository.java - 处方明细数据访问接口
+List<PrescriptionDetail> findByPrescriptionId(Long prescriptionId) - 根据处方ID查找
+List<PrescriptionDetail> findByMedicineId(Long medicineId) - 根据药品ID查找
+6. AuditRecordRepository.java - 审核记录数据访问接口
+List<AuditRecord> findByPrescriptionId(Long prescriptionId) - 根据处方ID查找
+List<AuditRecord> findByAuditResult(String auditResult) - 根据审核结果查找
+List<AuditRecord> findByAuditTimeBetween(LocalDateTime startTime, LocalDateTime endTime) - 根据审核时间范围查找
+特性
+继承 JpaRepository：所有接口继承 JpaRepository<Entity, Long>
+使用 @Repository：标注为Repository组件
+方法命名规范：遵循Spring Data JPA命名约定，自动生成查询
+返回类型：单条用 Optional，多条用 List
+日期范围查询：使用 Between 进行范围查询
+注释：每个方法都有JavaDoc注释
 
 ---
 
 ### 三、业务逻辑层（Service）- 6 个 Service
 
-#### 1. MedicineService
-- 方法：
-  - `List<Medicine> findAll()` - 获取所有药品
-  - `Medicine findById(Long id)` - 根据ID查询
-  - `Medicine save(Medicine medicine)` - 保存药品
-  - `Medicine update(Long id, Medicine medicine)` - 更新药品
-  - `void delete(Long id)` - 删除药品
-  - `List<Medicine> search(String keyword)` - 搜索药品
-  - `List<Medicine> findByCategory(String category)` - 按分类查询
-  - `void updateStock(Long id, Integer quantity)` - 更新库存
+1. **MedicineService** - 药品业务逻辑服务
+   - `findAll()` - 获取所有药品
+   - `findById(Long id)` - 根据ID查询
+   - `save(Medicine medicine)` - 保存药品
+   - `update(Long id, Medicine medicine)` - 更新药品
+   - `delete(Long id)` - 删除药品
+   - `search(String keyword)` - 搜索药品（名称模糊查询）
+   - `findByCategory(String category)` - 按分类查询
+   - `updateStock(Long id, Integer quantity)` - 更新库存（支持增减）
 
-#### 2. StockInService
-- 方法：
-  - `StockIn createStockIn(StockIn stockIn)` - 创建入库记录
-  - `List<StockIn> findAll()` - 获取所有入库记录
-  - `List<StockIn> findByMedicineId(Long medicineId)` - 按药品查询
-  - `List<StockIn> findByDateRange(LocalDate start, LocalDate end)` - 按日期范围查询
-  - `void processStockIn(StockIn stockIn)` - 处理入库（更新库存）
+2. **StockInService** - 入库业务逻辑服务
+   - `createStockIn(StockIn stockIn)` - 创建入库记录（自动更新库存）
+   - `findAll()` - 获取所有入库记录
+   - `findByMedicineId(Long medicineId)` - 按药品查询
+   - `findByDateRange(LocalDate start, LocalDate end)` - 按日期范围查询
+   - `processStockIn(StockIn stockIn)` - 处理入库（更新库存）
 
-#### 3. StockOutService
-- 方法：
-  - `StockOut createStockOut(StockOut stockOut)` - 创建出库记录
-  - `List<StockOut> findAll()` - 获取所有出库记录
-  - `List<StockOut> findByMedicineId(Long medicineId)` - 按药品查询
-  - `List<StockOut> findByDateRange(LocalDate start, LocalDate end)` - 按日期范围查询
-  - `void processStockOut(StockOut stockOut)` - 处理出库（更新库存，检查库存是否充足）
+3. **StockOutService** - 出库业务逻辑服务
+   - `createStockOut(StockOut stockOut)` - 创建出库记录（自动检查库存并扣减）
+   - `findAll()` - 获取所有出库记录
+   - `findByMedicineId(Long medicineId)` - 按药品查询
+   - `findByDateRange(LocalDate start, LocalDate end)` - 按日期范围查询
+   - `processStockOut(StockOut stockOut)` - 处理出库（检查库存充足性并扣减）
 
-#### 4. PrescriptionService
-- 方法：
-  - `Prescription createPrescription(Prescription prescription, List<PrescriptionDetail> details)` - 创建处方
-  - `Prescription findById(Long id)` - 根据ID查询
-  - `Prescription findByPrescriptionNumber(String number)` - 根据处方号查询
-  - `List<Prescription> findAll()` - 获取所有处方
-  - `List<Prescription> findByStatus(String status)` - 按状态查询
-  - `Prescription updateStatus(Long id, String status)` - 更新处方状态
-  - `void submitForAudit(Long prescriptionId)` - 提交审核（调用Python服务）
-  - `void dispense(Long prescriptionId)` - 发药（更新状态，扣减库存）
+4. **PrescriptionService** - 处方业务逻辑服务
+   - `createPrescription(Prescription prescription, List<PrescriptionDetail> details)` - 创建处方（包含明细）
+   - `findById(Long id)` - 根据ID查询
+   - `findByPrescriptionNumber(String number)` - 根据处方号查询
+   - `findAll()` - 获取所有处方
+   - `findByStatus(String status)` - 按状态查询
+   - `updateStatus(Long id, String status)` - 更新处方状态
+   - `submitForAudit(Long prescriptionId)` - 提交审核（预留Python服务集成接口）
+   - `dispense(Long prescriptionId)` - 发药（更新状态，扣减库存）
 
-#### 5. PrescriptionDetailService
-- 方法：
-  - `List<PrescriptionDetail> findByPrescriptionId(Long prescriptionId)` - 查询处方明细
-  - `PrescriptionDetail save(PrescriptionDetail detail)` - 保存明细
+5. **PrescriptionDetailService** - 处方明细业务逻辑服务
+   - `findByPrescriptionId(Long prescriptionId)` - 查询处方明细
+   - `save(PrescriptionDetail detail)` - 保存明细
+   - `saveAll(List<PrescriptionDetail> details)` - 批量保存明细
+   - `deleteByPrescriptionId(Long prescriptionId)` - 根据处方ID删除明细
 
-#### 6. AuditRecordService
-- 方法：
-  - `AuditRecord save(AuditRecord record)` - 保存审核记录
-  - `List<AuditRecord> findByPrescriptionId(Long prescriptionId)` - 查询审核历史
-  - `AuditRecord findLatestByPrescriptionId(Long prescriptionId)` - 查询最新审核记录
+6. **AuditRecordService** - 审核记录业务逻辑服务
+   - `save(AuditRecord record)` - 保存审核记录
+   - `findByPrescriptionId(Long prescriptionId)` - 查询审核历史（按时间倒序）
+   - `findLatestByPrescriptionId(Long prescriptionId)` - 查询最新审核记录
+   - `findById(Long id)` - 根据ID查询
+   - `findAll()` - 获取所有审核记录
+   - `findByAuditResult(String auditResult)` - 根据审核结果查询
+
+### 实现要点
+
+1. 事务管理：关键方法使用 `@Transactional` 确保数据一致性
+2. 业务逻辑：
+   - 入库/出库自动更新库存
+   - 出库前检查库存充足性
+   - 处方创建时自动生成处方号
+   - 发药时自动扣减库存并创建出库记录
+3. 异常处理：使用 `RuntimeException` 处理业务异常（后续可替换为自定义异常）
+4. Python 服务集成：`PrescriptionService.submitForAudit()` 已预留接口，待后续集成
+5. 代码质量：已修复所有编译警告和错误
+
+
 
 ---
 
