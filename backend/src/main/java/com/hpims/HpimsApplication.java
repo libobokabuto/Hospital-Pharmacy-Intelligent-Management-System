@@ -73,9 +73,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * ✅ 响应DTO: PrescriptionResponse, PrescriptionDetailResponse, AuditRecordResponse
  * ✅ 通用DTO: ApiResponse<T>, PageResponse<T>
  *
- * ⏳ 七、Python服务集成 - 待实现
- * ⏳ AuditServiceClient - HTTP客户端（调用Python审核服务）
- * ⏳ 审核结果映射 - 将Python服务返回结果映射为Java对象
+ * ✅ 七、Python服务集成 - 已完成
+ * ✅ AuditServiceClient - HTTP客户端（调用Python审核服务）
+ * ✅ AuditResultDto - 审核结果DTO（映射Python服务返回结果）
+ * ✅ RestTemplateConfig - RestTemplate配置
+ * ✅ PrescriptionService.submitForAudit() - 集成Python审核服务
  *
  * ⏳ 八、异常处理 - 待实现
  * ⏳ 自定义异常类: BusinessException, MedicineNotFoundException, StockInsufficientException等
@@ -83,10 +85,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  *
  * ⏳ 九、工具类和配置 - 部分已完成
  * ✅ WebConfig - Web MVC配置（已完成）
+ * ✅ RestTemplateConfig - RestTemplate配置（用于调用Python服务，已完成）
  * ⏳ ResponseUtil - 响应工具类（待实现）
  * ⏳ DateUtil - 日期工具类（待实现）
  * ⏳ ValidationUtil - 验证工具类（待实现）
- * ⏳ RestTemplateConfig - RestTemplate配置（用于调用Python服务，待实现）
  *
  * ⏳ 十、数据验证 - 待实现
  * ⏳ 实体类验证注解: @NotNull, @NotBlank, @Size等
