@@ -8,6 +8,7 @@ import lombok.Builder;
 import javax.persistence.*;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -33,6 +34,7 @@ public class StockIn {
     @JoinColumn(name = "medicine_id", insertable = false, updatable = false)
     private Medicine medicine;
 
+    @Size(max = 50, message = "批次号长度不能超过50个字符")
     @Column(name = "batch_number", length = 50)
     private String batchNumber;
 
@@ -41,6 +43,7 @@ public class StockIn {
     @Column(nullable = false)
     private Integer quantity;
 
+    @Size(max = 100, message = "供应商名称长度不能超过100个字符")
     @Column(length = 100)
     private String supplier;
 
@@ -48,6 +51,7 @@ public class StockIn {
     @Column(name = "in_date", nullable = false)
     private LocalDate inDate;
 
+    @Size(max = 50, message = "操作员姓名长度不能超过50个字符")
     @Column(length = 50)
     private String operator;
 

@@ -8,6 +8,7 @@ import lombok.Builder;
 import javax.persistence.*;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 /**
@@ -45,9 +46,11 @@ public class PrescriptionDetail {
     @Column(nullable = false)
     private Integer quantity;
 
+    @Size(max = 100, message = "用法用量长度不能超过100个字符")
     @Column(length = 100)
     private String dosage; // 用法用量，如：每次2粒
 
+    @Size(max = 50, message = "频次长度不能超过50个字符")
     @Column(length = 50)
     private String frequency; // 频次，如：每日3次
 

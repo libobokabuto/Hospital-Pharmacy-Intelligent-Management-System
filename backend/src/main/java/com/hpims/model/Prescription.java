@@ -5,9 +5,11 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
+import com.hpims.validation.PrescriptionNumber;
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,22 +29,27 @@ public class Prescription {
     private Long id;
 
     @NotBlank(message = "处方号不能为空")
+    @PrescriptionNumber
     @Column(name = "prescription_number", unique = true, nullable = false, length = 50)
     private String prescriptionNumber;
 
     @NotBlank(message = "患者姓名不能为空")
+    @Size(max = 50, message = "患者姓名长度不能超过50个字符")
     @Column(name = "patient_name", nullable = false, length = 50)
     private String patientName;
 
     @Column(name = "patient_age")
     private Integer patientAge;
 
+    @Size(max = 10, message = "患者性别长度不能超过10个字符")
     @Column(name = "patient_gender", length = 10)
     private String patientGender;
 
+    @Size(max = 50, message = "医生姓名长度不能超过50个字符")
     @Column(name = "doctor_name", length = 50)
     private String doctorName;
 
+    @Size(max = 50, message = "科室名称长度不能超过50个字符")
     @Column(length = 50)
     private String department;
 
@@ -51,6 +58,7 @@ public class Prescription {
     private LocalDate createDate;
 
     @NotBlank(message = "处方状态不能为空")
+    @Size(max = 20, message = "处方状态长度不能超过20个字符")
     @Column(nullable = false, length = 20)
     private String status; // 未审核、审核中、已通过、已拒绝、已发药、已取消
 

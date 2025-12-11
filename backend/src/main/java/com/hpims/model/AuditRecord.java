@@ -6,8 +6,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 
 import javax.persistence.*;
+import javax.validation.constraints.DecimalMax;
+import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -33,13 +36,17 @@ public class AuditRecord {
     @JoinColumn(name = "prescription_id", insertable = false, updatable = false)
     private Prescription prescription;
 
+    @Size(max = 20, message = "审核类型长度不能超过20个字符")
     @Column(name = "audit_type", length = 20)
     private String auditType; // 自动审核、人工审核
 
     @NotBlank(message = "审核结果不能为空")
+    @Size(max = 20, message = "审核结果长度不能超过20个字符")
     @Column(name = "audit_result", nullable = false, length = 20)
     private String auditResult; // 通过、拒绝、待审核
 
+    @DecimalMin(value = "0.0", message = "审核得分不能小于0")
+    @DecimalMax(value = "100.0", message = "审核得分不能大于100")
     @Column(name = "audit_score", precision = 5, scale = 2)
     private BigDecimal auditScore; // 审核得分，0-100
 
@@ -49,6 +56,7 @@ public class AuditRecord {
     @Column(columnDefinition = "TEXT")
     private String suggestions; // 建议
 
+    @Size(max = 50, message = "审核人姓名长度不能超过50个字符")
     @Column(length = 50)
     private String auditor; // 审核人
 

@@ -2,6 +2,7 @@ package com.hpims.controller;
 
 import com.hpims.dto.ApiResponse;
 import com.hpims.dto.PageResponse;
+import com.hpims.dto.request.PrescriptionAuditRequest;
 import com.hpims.model.Prescription;
 import com.hpims.model.PrescriptionDetail;
 import com.hpims.service.PrescriptionService;
@@ -181,7 +182,7 @@ public class PrescriptionController {
     @PostMapping("/{id}/audit")
     public ResponseEntity<ApiResponse<String>> auditPrescription(
             @PathVariable Long id,
-            @RequestBody Map<String, String> auditData) {
+            @Valid @RequestBody PrescriptionAuditRequest auditRequest) {
         try {
             // 检查权限：药师或管理员
             if (!isPharmacistOrAdmin()) {
@@ -189,8 +190,8 @@ public class PrescriptionController {
                         .body(ApiResponse.error("权限不足，需要药师或管理员权限"));
             }
 
-            String auditResult = auditData.get("auditResult");
-            String suggestions = auditData.get("suggestions");
+            String auditResult = auditRequest.getAuditResult();
+            String suggestions = auditRequest.getSuggestions();
 
             // 更新处方状态
             if ("通过".equals(auditResult) || "已通过".equals(auditResult)) {
@@ -204,8 +205,10 @@ public class PrescriptionController {
                     .prescriptionId(id)
                     .auditType("人工审核")
                     .auditResult(auditResult)
+                    .auditScore(auditRequest.getAuditScore())
+                    .issuesFound(auditRequest.getIssuesFound())
                     .suggestions(suggestions)
-                    .auditor(getCurrentUsername())
+                    .auditor(auditRequest.getAuditor() != null ? auditRequest.getAuditor() : getCurrentUsername())
                     .auditTime(java.time.LocalDateTime.now())
                     .build();
 
