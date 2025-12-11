@@ -13,7 +13,7 @@
 ## 快速开始
 
 ### 1. 环境准备
-- JDK 17+
+- JDK 21+
 - MySQL 8.0
 - Maven 3.6+
 - IDE (IntelliJ IDEA 或 Eclipse)
