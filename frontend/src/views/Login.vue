@@ -12,6 +12,7 @@
         :rules="loginRules"
         label-width="0px"
         class="login-form-content"
+        @submit.prevent="handleLogin"
       >
         <el-form-item prop="username">
           <el-input
@@ -87,14 +88,21 @@ export default {
       ]
     }
 
-    const handleLogin = async () => {
+    const handleLogin = async (e) => {
+      // 阻止表单默认提交行为
+      if (e && e.preventDefault) {
+        e.preventDefault()
+      }
+
       if (!loginFormRef.value) return
 
       try {
+        // 验证表单
         await loginFormRef.value.validate()
 
         loading.value = true
 
+        // 调用登录接口
         const result = await userStore.login(loginForm.username, loginForm.password)
 
         if (result.success) {
@@ -116,13 +124,26 @@ export default {
               router.push('/pharmacist')
               break
             default:
+              ElMessage.warning('未知角色，请联系管理员')
               router.push('/login')
           }
         } else {
-          ElMessage.error(result.message || '登录失败')
+          // 登录失败，显示错误信息
+          ElMessage.error(result.message || '登录失败，请检查用户名和密码')
         }
       } catch (error) {
-        console.error('Login validation error:', error)
+        // 表单验证失败或其他错误
+        // Element Plus 验证失败时，error 格式为 { fieldName: [errorMessages] }
+        // 这种情况下不需要额外处理，Element Plus 已经显示了错误信息
+        if (error && typeof error === 'object' && !error.message) {
+          // 这是表单验证错误，Element Plus 会自动显示，不需要额外处理
+          return
+        }
+        // 其他类型的错误才显示
+        console.error('Login error:', error)
+        if (error.message) {
+          ElMessage.error(error.message)
+        }
       } finally {
         loading.value = false
       }

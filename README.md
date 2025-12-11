@@ -35,6 +35,9 @@ mvn spring-boot:run
 ```
 
 ### 4. 前端访问
+cd frontend
+npm install
+npm run dev
 打开浏览器访问: http://localhost:8080
 
 ### 5. 测试接口

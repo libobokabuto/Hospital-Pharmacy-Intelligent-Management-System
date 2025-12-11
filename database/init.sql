@@ -2,7 +2,7 @@
 -- 创建时间: 2024-12-10
 
 -- 创建用户表
-CREATE TABLE IF NOT EXISTS sys_user (
+CREATE TABLE IF NOT EXISTS users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(50) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
@@ -101,11 +101,11 @@ CREATE TABLE IF NOT EXISTS audit_record (
     FOREIGN KEY (prescription_id) REFERENCES prescription(id)
 );
 
--- 插入默认用户数据（避免重复插入）
-INSERT IGNORE INTO sys_user (username, password, role, real_name, department) VALUES
-('admin', '123456', 'admin', '系统管理员', '信息部'),
-('doctor', '123456', 'doctor', '李医生', '内科'),
-('pharmacist', '123456', 'pharmacist', '王药师', '药房');
+-- 插入默认用户数据（避免重复插入，密码已使用BCrypt加密，明文为"123456"）
+INSERT IGNORE INTO users (username, password, role, real_name, department) VALUES
+('admin', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'admin', '系统管理员', '信息部'),
+('doctor', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'doctor', '李医生', '内科'),
+('pharmacist', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'pharmacist', '王药师', '药房');
 
 -- 插入测试药品数据（避免重复插入）
 INSERT IGNORE INTO medicine (name, generic_name, specification, manufacturer, price, stock_quantity, min_stock, category, approval_number) VALUES
@@ -149,7 +149,7 @@ INSERT IGNORE INTO audit_record (prescription_id, audit_type, audit_result, audi
 (3, '自动审核', '待审核', NULL, '正在审核中', NULL, '系统审核');
 
 -- 检查用户表
-SELECT id, username, role, real_name FROM sys_user;
+SELECT id, username, role, real_name FROM users;
 
 -- 检查药品表
 SELECT id, name, stock_quantity, price FROM medicine;

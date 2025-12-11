@@ -11,16 +11,16 @@ TRUNCATE TABLE prescription;
 TRUNCATE TABLE stock_in;
 TRUNCATE TABLE stock_out;
 TRUNCATE TABLE medicine;
-TRUNCATE TABLE sys_user;
+TRUNCATE TABLE users;
 
 -- 恢复外键约束
 SET FOREIGN_KEY_CHECKS = 1;
 
--- 重新插入默认用户数据
-INSERT INTO sys_user (username, password, role, real_name, department) VALUES
-('admin', '123456', 'admin', '系统管理员', '信息部'),
-('doctor', '123456', 'doctor', '李医生', '内科'),
-('pharmacist', '123456', 'pharmacist', '王药师', '药房');
+-- 重新插入默认用户数据（密码已使用BCrypt加密，明文为"123456"）
+INSERT INTO users (username, password, role, real_name, department) VALUES
+('admin', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'admin', '系统管理员', '信息部'),
+('doctor', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'doctor', '李医生', '内科'),
+('pharmacist', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'pharmacist', '王药师', '药房');
 
 -- 重新插入测试药品数据
 INSERT INTO medicine (name, generic_name, specification, manufacturer, price, stock_quantity, min_stock, category, approval_number) VALUES
@@ -64,7 +64,7 @@ INSERT INTO audit_record (prescription_id, audit_type, audit_result, audit_score
 (3, '自动审核', '待审核', NULL, '正在审核中', NULL, '系统审核');
 
 -- 验证数据
-SELECT '用户表' as table_name, COUNT(*) as count FROM sys_user
+SELECT '用户表' as table_name, COUNT(*) as count FROM users
 UNION ALL
 SELECT '药品表', COUNT(*) FROM medicine
 UNION ALL

@@ -49,6 +49,29 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         try {
+            // 先检查用户是否存在
+            User user = userService.findByUsername(request.getUsername());
+            if (user == null) {
+                System.out.println("登录失败: 用户不存在 - " + request.getUsername());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("用户名或密码错误"));
+            }
+
+            System.out.println("尝试登录用户: " + request.getUsername());
+            System.out.println("前端发送的密码长度: " + (request.getPassword() != null ? request.getPassword().length() : 0));
+            System.out.println("前端发送的密码（隐藏）: " + (request.getPassword() != null ? "*".repeat(request.getPassword().length()) : "null"));
+            System.out.println("数据库中的密码哈希长度: " + user.getPassword().length());
+            System.out.println("数据库中的密码哈希: " + user.getPassword());
+            System.out.println("密码哈希格式检查: " + (user.getPassword().startsWith("$2a$") || user.getPassword().startsWith("$2y$") ? "正确" : "错误"));
+            
+            // 手动测试密码验证
+            boolean matches = passwordEncoder.matches(request.getPassword(), user.getPassword());
+            System.out.println("手动密码验证结果: " + matches);
+            if (!matches) {
+                System.out.println("密码不匹配！尝试的密码: " + request.getPassword());
+                System.out.println("存储的哈希: " + user.getPassword());
+            }
+
             // 验证用户
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
@@ -58,27 +81,43 @@ public class AuthController {
 
             // 获取用户信息
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            User user = userService.findByUsername(userDetails.getUsername());
+            User authenticatedUser = userService.findByUsername(userDetails.getUsername());
 
-            if (user == null) {
+            if (authenticatedUser == null) {
+                System.out.println("登录失败: 认证后用户不存在");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(ApiResponse.error("用户不存在"));
             }
 
             // 生成JWT令牌
-            String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
+            String token = jwtUtil.generateToken(authenticatedUser.getUsername(), authenticatedUser.getRole());
 
             // 构建响应
             LoginResponse response = LoginResponse.builder()
                     .token(token)
-                    .username(user.getUsername())
-                    .role(user.getRole())
-                    .realName(user.getRealName())
-                    .userId(user.getId())
+                    .username(authenticatedUser.getUsername())
+                    .role(authenticatedUser.getRole())
+                    .realName(authenticatedUser.getRealName())
+                    .userId(authenticatedUser.getId())
                     .build();
 
+            System.out.println("登录成功: " + authenticatedUser.getUsername());
             return ResponseEntity.ok(ApiResponse.success("登录成功", response));
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            System.out.println("登录失败: 密码错误 - " + request.getUsername());
+            System.out.println("错误详情: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("用户名或密码错误"));
+        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+            System.out.println("登录失败: 用户未找到 - " + request.getUsername());
+            System.out.println("错误详情: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("用户名或密码错误"));
         } catch (Exception e) {
+            System.out.println("登录失败: 未知错误 - " + request.getUsername());
+            System.out.println("错误类型: " + e.getClass().getName());
+            System.out.println("错误消息: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("用户名或密码错误"));
         }
@@ -206,6 +245,31 @@ public class AuthController {
     public ResponseEntity<ApiResponse<String>> logout() {
         SecurityContextHolder.clearContext();
         return ResponseEntity.ok(ApiResponse.success("登出成功", null));
+    }
+
+    /**
+     * 临时调试端点：生成密码哈希
+     * 用于生成正确的BCrypt密码哈希
+     * 访问: GET /auth/generate-hash?password=123456
+     */
+    @GetMapping("/generate-hash")
+    public ResponseEntity<String> generateHash(@RequestParam(defaultValue = "123456") String password) {
+        String hash = passwordEncoder.encode(password);
+        String sql = String.format(
+            "UPDATE users SET password = '%s' WHERE username IN ('admin', 'doctor', 'pharmacist');",
+            hash
+        );
+        
+        String result = "========================================\n" +
+                       "密码: " + password + "\n" +
+                       "BCrypt哈希: " + hash + "\n" +
+                       "哈希长度: " + hash.length() + "\n" +
+                       "========================================\n\n" +
+                       "SQL更新语句:\n" +
+                       sql + "\n" +
+                       "========================================";
+        
+        return ResponseEntity.ok(result);
     }
 }
 

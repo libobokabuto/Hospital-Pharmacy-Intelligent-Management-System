@@ -1,104 +1,10 @@
-/*
-TODO: 易瑜需要完善的API接口配置
-==============================
-
-需要完善的API模块:
-TODO: api/auth.js - 用户认证相关API
-  - login() - 用户登录
-  - logout() - 用户登出
-  - refresh() - 令牌刷新
-  - getCurrentUser() - 获取当前用户信息
-  - updateProfile() - 更新用户信息
-  - changePassword() - 修改密码
-
-TODO: api/medicine.js - 药品管理API ⭐⭐⭐
-  - getMedicines() - 获取药品列表 (分页、筛选、搜索)
-  - getMedicine(id) - 获取药品详情
-  - createMedicine() - 创建药品
-  - updateMedicine() - 更新药品
-  - deleteMedicine() - 删除药品
-  - searchMedicines() - 药品搜索
-  - getMedicineCategories() - 获取药品分类
-  - uploadMedicineImage() - 上传药品图片
-
-TODO: api/inventory.js - 库存管理API ⭐⭐⭐
-  - getInventory() - 获取库存列表
-  - getLowStockAlerts() - 获取库存预警
-  - stockIn() - 药品入库
-  - stockOut() - 药品出库
-  - getStockHistory() - 库存操作历史
-  - getStockStatistics() - 库存统计数据
-  - batchStockIn() - 批量入库
-
-TODO: api/prescription.js - 处方管理API ⭐⭐⭐
-  - getPrescriptions() - 获取处方列表 (分页、筛选)
-  - getPrescription(id) - 获取处方详情
-  - createPrescription() - 创建处方
-  - updatePrescription() - 更新处方
-  - deletePrescription() - 删除处方
-  - auditPrescription() - 审核处方
-  - getPrescriptionAuditHistory() - 获取审核历史
-  - dispensePrescription() - 发药
-  - printPrescription() - 打印处方
-
-TODO: api/audit.js - 审核服务API ⭐⭐⭐
-  - auditPrescription() - 单个处方审核
-  - batchAuditPrescriptions() - 批量审核
-  - getAuditHistory() - 审核历史查询
-  - getAuditStatistics() - 审核统计
-  - getAuditRules() - 获取审核规则
-  - updateAuditRules() - 更新审核规则
-
-TODO: api/user.js - 用户管理API
-  - getUsers() - 获取用户列表 (管理员)
-  - getUser(id) - 获取用户详情
-  - createUser() - 创建用户
-  - updateUser() - 更新用户
-  - deleteUser() - 删除用户
-  - updateUserRole() - 更新用户角色
-  - resetUserPassword() - 重置密码
-
-TODO: api/statistics.js - 统计报表API
-  - getDashboardStats() - 仪表板统计
-  - getPrescriptionStats() - 处方统计
-  - getInventoryStats() - 库存统计
-  - getAuditStats() - 审核统计
-  - exportReport() - 导出报表
-
-API工具函数 (需要完善):
-TODO: utils/request.js - 请求工具函数
-  - 统一错误处理
-  - 请求取消功能
-  - 重试机制
-  - 缓存机制
-
-TODO: utils/api-helpers.js - API辅助函数
-  - 参数序列化
-  - 响应数据转换
-  - 分页参数处理
-  - 文件下载处理
-
-类型定义 (需要创建):
-TODO: types/api.ts - API类型定义
-  - 请求响应类型
-  - 数据模型类型
-  - 错误类型定义
-
-测试 (需要实现):
-TODO: tests/api/ - API测试文件
-  - 单元测试
-  - 集成测试
-  - Mock数据
-
-作者: 易瑜 (前端负责人)
-*/
-
 import axios from 'axios'
+import { ElMessage } from 'element-plus'
 
 // 创建axios实例
 const api = axios.create({
   baseURL: '/api',
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -121,16 +27,20 @@ api.interceptors.request.use(
 // 响应拦截器
 api.interceptors.response.use(
   (response) => {
-    return response.data
+    const data = response.data
+    // 如果响应数据已经是处理过的格式（有success字段），直接返回
+    if (data && typeof data.success !== 'undefined') {
+      return data
+    }
+    // 否则包装成标准格式
+    return { success: true, data: data }
   },
   (error) => {
     if (error.response) {
       const { status, data } = error.response
 
-      // 处理常见HTTP状态码
       switch (status) {
         case 401:
-          // 未授权，清除token并跳转到登录页
           localStorage.removeItem('token')
           localStorage.removeItem('userRole')
           window.location.href = '/login'
@@ -145,7 +55,7 @@ api.interceptors.response.use(
           ElMessage.error('服务器错误')
           break
         default:
-          ElMessage.error(data.message || '请求失败')
+          ElMessage.error(data?.message || '请求失败')
       }
     } else {
       ElMessage.error('网络错误，请检查网络连接')
@@ -155,47 +65,113 @@ api.interceptors.response.use(
   }
 )
 
-// 用户相关API
-export const userAPI = {
+// ==================== 认证相关API ====================
+export const authAPI = {
+  // 登录
   login: (data) => api.post('/auth/login', data),
+  // 注册
+  register: (data) => api.post('/auth/register', data),
+  // 获取当前用户信息
+  getCurrentUser: () => api.get('/auth/me'),
+  // 刷新令牌
+  refreshToken: (data) => api.post('/auth/refresh', data),
+  // 登出
   logout: () => api.post('/auth/logout'),
-  getUserInfo: () => api.get('/auth/user'),
-  updatePassword: (data) => api.put('/auth/password', data),
 }
 
-// 药品管理API
+// ==================== 用户管理API ====================
+export const userAPI = {
+  // 获取用户列表
+  getUsers: (params) => api.get('/users', { params }),
+  // 获取用户详情
+  getUser: (id) => api.get(`/users/${id}`),
+  // 创建用户
+  createUser: (data) => api.post('/users', data),
+  // 更新用户
+  updateUser: (id, data) => api.put(`/users/${id}`, data),
+  // 删除用户
+  deleteUser: (id) => api.delete(`/users/${id}`),
+  // 更新用户角色
+  updateUserRole: (id, role) => api.put(`/users/${id}/role`, role),
+}
+
+// ==================== 药品管理API ====================
 export const medicineAPI = {
+  // 获取药品列表（分页、搜索、筛选）
   getMedicines: (params) => api.get('/medicines', { params }),
+  // 获取药品详情
   getMedicine: (id) => api.get(`/medicines/${id}`),
+  // 创建药品
   createMedicine: (data) => api.post('/medicines', data),
+  // 更新药品
   updateMedicine: (id, data) => api.put(`/medicines/${id}`, data),
+  // 删除药品
   deleteMedicine: (id) => api.delete(`/medicines/${id}`),
+  // 搜索药品
+  searchMedicines: (keyword) => api.get('/medicines/search', { params: { keyword } }),
+  // 按分类查询
+  getMedicinesByCategory: (category) => api.get(`/medicines/category/${category}`),
+  // 查询低库存药品
+  getLowStockMedicines: () => api.get('/medicines/low-stock'),
 }
 
-// 库存管理API
-export const inventoryAPI = {
-  getInventory: (params) => api.get('/inventory', { params }),
-  stockIn: (data) => api.post('/inventory/stock-in', data),
-  stockOut: (data) => api.post('/inventory/stock-out', data),
-  getStockHistory: (params) => api.get('/inventory/history', { params }),
+// ==================== 库存管理API ====================
+export const stockAPI = {
+  // 药品入库
+  stockIn: (data) => api.post('/stock/in', data),
+  // 药品出库
+  stockOut: (data) => api.post('/stock/out', data),
+  // 获取入库记录列表
+  getStockInRecords: (params) => api.get('/stock/in', { params }),
+  // 获取出库记录列表
+  getStockOutRecords: (params) => api.get('/stock/out', { params }),
+  // 获取入库记录详情
+  getStockInById: (id) => api.get(`/stock/in/${id}`),
+  // 获取出库记录详情
+  getStockOutById: (id) => api.get(`/stock/out/${id}`),
+  // 查询药品库存
+  getMedicineStock: (medicineId) => api.get(`/stock/medicine/${medicineId}`),
+  // 库存统计
+  getStockStatistics: () => api.get('/stock/statistics'),
 }
 
-// 处方管理API
+// ==================== 处方管理API ====================
 export const prescriptionAPI = {
+  // 创建处方
+  createPrescription: (data, details) => {
+    const requestData = { ...data, details }
+    return api.post('/prescriptions', requestData)
+  },
+  // 获取处方列表（分页、筛选）
   getPrescriptions: (params) => api.get('/prescriptions', { params }),
+  // 获取处方详情
   getPrescription: (id) => api.get(`/prescriptions/${id}`),
-  createPrescription: (data) => api.post('/prescriptions', data),
+  // 更新处方
   updatePrescription: (id, data) => api.put(`/prescriptions/${id}`, data),
+  // 提交审核
+  submitForAudit: (id) => api.post(`/prescriptions/${id}/submit-audit`),
+  // 人工审核
   auditPrescription: (id, data) => api.post(`/prescriptions/${id}/audit`, data),
-  dispensePrescription: (id, data) => api.post(`/prescriptions/${id}/dispense`, data),
+  // 发药
+  dispensePrescription: (id) => api.post(`/prescriptions/${id}/dispense`),
+  // 取消处方
+  cancelPrescription: (id) => api.post(`/prescriptions/${id}/cancel`),
+  // 获取处方明细
+  getPrescriptionDetails: (id) => api.get(`/prescriptions/${id}/details`),
+  // 获取审核历史
+  getAuditHistory: (id) => api.get(`/prescriptions/${id}/audit-history`),
 }
 
-// 审核服务API
+// ==================== 审核记录API ====================
 export const auditAPI = {
-  auditPrescription: (data) => axios.post('/audit/prescription/audit', data, {
-    headers: { 'Content-Type': 'application/json' }
-  }),
-  getAuditRules: () => axios.get('/audit/rules'),
+  // 获取审核记录列表
+  getAuditRecords: (params) => api.get('/audit/records', { params }),
+  // 获取审核记录详情
+  getAuditRecord: (id) => api.get(`/audit/records/${id}`),
+  // 获取处方的审核历史
+  getPrescriptionAuditHistory: (prescriptionId) => api.get(`/audit/records/prescription/${prescriptionId}`),
+  // 审核统计
+  getAuditStatistics: () => api.get('/audit/statistics'),
 }
 
 export default api
