@@ -1,54 +1,49 @@
-分析 Java 模块（backend）的工作项。先查看项目结构和现有代码：
-
-
-[3 tools called]
-
-
-查看现有代码和数据库结构：
-
-
-[6 tools called]
-
-
-查看数据库脚本和现有控制器：
-
-
-[4 tools called]
-
-
-检查配置和现有代码结构：
-
-
-[3 tools called]
-
 
 ## Java 模块工作清单
 
 ### 一、实体类（Model 层）- 6 个实体类
 
-#### 1. Medicine（药品信息）
+
+
+### 1. **Medicine.java** - 药品信息实体类
 - 字段：id, name, genericName, specification, manufacturer, price, stockQuantity, minStock, category, approvalNumber, createTime, updateTime
-- 注解：JPA 实体注解、表名映射、字段验证
+- 包含数据验证注解（@NotBlank, @NotNull, @Min, @DecimalMin）
+- 自动设置创建时间和更新时间
 
-#### 2. StockIn（入库记录）
+### 2. **StockIn.java** - 入库记录实体类
 - 字段：id, medicineId, batchNumber, quantity, supplier, inDate, operator, createTime
-- 关系：与 Medicine 多对一
+- 与 Medicine 多对一关系（@ManyToOne）
+- 包含数据验证注解
 
-#### 3. StockOut（出库记录）
+### 3. **StockOut.java** - 出库记录实体类
 - 字段：id, medicineId, batchNumber, quantity, outDate, operator, reason, createTime
-- 关系：与 Medicine 多对一
+- 与 Medicine 多对一关系（@ManyToOne）
+- 包含数据验证注解
 
-#### 4. Prescription（处方主表）
+### 4. **Prescription.java** - 处方主表实体类
 - 字段：id, prescriptionNumber, patientName, patientAge, patientGender, doctorName, department, createDate, status, auditResult, auditTime, createTime, updateTime
-- 关系：与 PrescriptionDetail 一对多
+- 与 PrescriptionDetail 一对多关系（@OneToMany）
+- 包含数据验证注解
 
-#### 5. PrescriptionDetail（处方明细）
+### 5. **PrescriptionDetail.java** - 处方明细实体类
 - 字段：id, prescriptionId, medicineId, quantity, dosage, frequency, days, createTime
-- 关系：与 Prescription 多对一，与 Medicine 多对一
+- 与 Prescription 多对一关系（@ManyToOne）
+- 与 Medicine 多对一关系（@ManyToOne）
+- 包含数据验证注解
 
-#### 6. AuditRecord（审核记录）
+### 6. **AuditRecord.java** - 审核记录实体类
 - 字段：id, prescriptionId, auditType, auditResult, auditScore, issuesFound, suggestions, auditor, auditTime, createTime
-- 关系：与 Prescription 多对一
+- 与 Prescription 多对一关系（@ManyToOne）
+- 包含数据验证注解
+
+## 特性
+
+1. 使用 Lombok：@Data, @NoArgsConstructor, @AllArgsConstructor, @Builder
+2. JPA 注解：@Entity, @Table, @Id, @GeneratedValue, @Column
+3. 关系映射：正确配置了实体间的关系
+4. 数据验证：使用 javax.validation 注解进行字段验证
+5. 自动时间戳：使用 @PrePersist 和 @PreUpdate 自动设置时间
+6. 字段映射：使用 @Column(name = "xxx") 映射数据库字段名
 
 ---
 

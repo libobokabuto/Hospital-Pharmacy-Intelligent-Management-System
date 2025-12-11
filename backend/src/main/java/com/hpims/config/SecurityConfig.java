@@ -20,29 +20,62 @@ import java.util.Arrays;
 
 /**
  * Spring Security配置类
+ * 
+ * 已实现功能:
+ * - JWT认证过滤器集成
+ * - CORS跨域配置
+ * - 密码加密器（BCrypt）
+ * - 认证管理器配置
+ * - 公开路径配置: /auth/login, /auth/register, /swagger-ui/**
+ * - 其他路径需要JWT认证
  *
- * TODO: 李教博需要实现的认证控制器
+ * 控制器开发任务 (参考 javaWork.md 第四部分)
  * ===================================
  *
- * 认证相关控制器 (需要创建):
+ * ⏳ 认证相关控制器 (待实现):
  * TODO: AuthController - 用户认证控制器
- *   - POST /auth/login - 用户登录
- *   - POST /auth/register - 用户注册
- *   - GET /auth/me - 获取当前用户信息
- *   - POST /auth/logout - 用户登出
- *   - POST /auth/refresh - JWT令牌刷新
+ *   - POST /auth/login - 用户登录（返回JWT，使用UserService和JwtUtil）
+ *   - POST /auth/register - 用户注册（使用UserService和PasswordEncoder）
+ *   - GET /auth/me - 获取当前用户信息（从SecurityContext获取）
+ *   - POST /auth/logout - 登出（可选，JWT无状态，客户端删除token即可）
+ *   - POST /auth/refresh - 刷新JWT令牌（验证旧token，生成新token）
  *
- * 用户管理控制器 (需要创建):
+ * ⏳ 用户管理控制器 (待实现):
  * TODO: UserController - 用户管理控制器
- *   - GET /users - 获取用户列表 (管理员)
- *   - POST /users - 创建用户 (管理员)
- *   - PUT /users/{id} - 更新用户信息
- *   - DELETE /users/{id} - 删除用户 (管理员)
- *   - PUT /users/{id}/role - 修改用户角色 (管理员)
+ *   - GET /users - 获取用户列表（分页，管理员，使用UserService）
+ *   - POST /users - 创建用户（管理员，使用UserService和PasswordEncoder）
+ *   - GET /users/{id} - 获取用户详情（使用UserService.findById）
+ *   - PUT /users/{id} - 更新用户信息（使用UserService.save）
+ *   - DELETE /users/{id} - 删除用户（管理员，使用UserService.deleteById）
+ *   - PUT /users/{id}/role - 修改用户角色（管理员，使用UserService）
  *
- * 权限验证注解 (需要创建):
- * TODO: @RequireRole - 角色权限注解
- * TODO: @RequirePermission - 权限验证注解
+ * ⏳ 其他控制器 (待实现):
+ * TODO: MedicineController - 药品管理API
+ *   - 需要先实现MedicineService
+ *   - 接口: GET /medicines, POST /medicines, PUT /medicines/{id}, DELETE /medicines/{id}
+ *   - 权限: 管理员/药师可创建/更新/删除，所有用户可查询
+ *
+ * TODO: StockController - 库存管理API（入库/出库）
+ *   - 需要先实现StockInService和StockOutService
+ *   - 接口: POST /stock/in, POST /stock/out, GET /stock/in, GET /stock/out
+ *   - 权限: 管理员/药师可操作，所有用户可查询
+ *
+ * TODO: PrescriptionController - 处方管理API
+ *   - 需要先实现PrescriptionService和PrescriptionDetailService
+ *   - 接口: POST /prescriptions, GET /prescriptions, POST /prescriptions/{id}/submit-audit
+ *   - 权限: 医生可创建，药师可审核/发药，所有用户可查询
+ *
+ * TODO: AuditController - 审核记录管理API
+ *   - 需要先实现AuditRecordService
+ *   - 接口: GET /audit/records, GET /audit/records/{id}
+ *   - 权限: 管理员/药师可查看
+ *
+ * ⏳ 权限验证注解 (可选，待实现):
+ * TODO: @RequireRole("ADMIN") - 角色权限注解（方法级权限控制）
+ * TODO: @RequirePermission("USER_MANAGE") - 权限验证注解（细粒度权限控制）
+ * 
+ * 注意: 当前配置中，除公开路径外，所有请求都需要JWT认证。
+ *       实现Controller时，可以通过SecurityContext获取当前认证用户信息。
  */
 @Configuration
 @EnableWebSecurity

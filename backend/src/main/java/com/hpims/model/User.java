@@ -11,45 +11,41 @@ import java.time.LocalDateTime;
 /**
  * 用户实体类
  *
- * TODO: 李教博需要实现的其他实体类
+ * 实体类状态 (参考 javaWork.md)
  * ================================
  *
- * 药品管理实体类 (需要创建):
- * TODO: Medicine.java - 药品信息实体类
- *   - id, name, genericName, specification, manufacturer
- *   - category, unit, price, expiryDate, batchNumber
- *   - description, sideEffects, contraindications, storage
+ * ✅ 已完成的实体类 (6个):
+ * ✅ Medicine.java - 药品信息实体类
+ *   - id, name, genericName, specification, manufacturer, price
+ *   - stockQuantity, minStock, category, approvalNumber
  *   - createTime, updateTime
  *
- * 库存管理实体类 (需要创建):
- * TODO: Inventory.java - 库存信息实体类
- *   - id, medicineId, currentStock, minStock, maxStock
- *   - location, lastUpdated
+ * ✅ StockIn.java - 入库记录实体类
+ *   - id, medicineId, batchNumber, quantity, supplier
+ *   - inDate, operator, createTime
+ *   - 与 Medicine 多对一关系 (@ManyToOne)
  *
- * TODO: StockIn.java - 入库记录实体类
- *   - id, medicineId, quantity, batchNumber, expiryDate
- *   - supplier, operatorId, operateTime, notes
+ * ✅ StockOut.java - 出库记录实体类
+ *   - id, medicineId, batchNumber, quantity
+ *   - outDate, operator, reason, createTime
+ *   - 与 Medicine 多对一关系 (@ManyToOne)
  *
- * TODO: StockOut.java - 出库记录实体类
- *   - id, medicineId, quantity, batchNumber, reason
- *   - operatorId, operateTime, destination, notes
+ * ✅ Prescription.java - 处方主表实体类
+ *   - id, prescriptionNumber, patientName, patientAge, patientGender
+ *   - doctorName, department, createDate, status
+ *   - auditResult, auditTime, createTime, updateTime
+ *   - 与 PrescriptionDetail 一对多关系 (@OneToMany)
  *
- * 处方管理实体类 (需要创建):
- * TODO: Prescription.java - 处方主表实体类
- *   - id, prescriptionNumber, patientId, patientName
- *   - doctorId, doctorName, department, diagnose
- *   - createTime, status, totalAmount
+ * ✅ PrescriptionDetail.java - 处方明细实体类
+ *   - id, prescriptionId, medicineId, quantity
+ *   - dosage, frequency, days, createTime
+ *   - 与 Prescription 多对一关系 (@ManyToOne)
+ *   - 与 Medicine 多对一关系 (@ManyToOne)
  *
- * TODO: PrescriptionDetail.java - 处方明细实体类
- *   - id, prescriptionId, medicineId, medicineName
- *   - dosage, frequency, days, quantity, unit
- *   - instructions, price, subtotal
- *
- * 审核记录实体类 (需要创建):
- * TODO: AuditRecord.java - 审核记录实体类
- *   - id, prescriptionId, auditorId, auditTime
- *   - result, score, riskLevel, suggestions
- *   - algorithmVersion, processingTime
+ * ✅ AuditRecord.java - 审核记录实体类
+ *   - id, prescriptionId, auditType, auditResult, auditScore
+ *   - issuesFound, suggestions, auditor, auditTime, createTime
+ *   - 与 Prescription 多对一关系 (@ManyToOne)
  */
 @Data
 @NoArgsConstructor
