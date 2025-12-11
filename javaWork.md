@@ -152,65 +152,100 @@ List<AuditRecord> findByAuditTimeBetween(LocalDateTime startTime, LocalDateTime 
 ---
 
 ### 四、控制器层（Controller）- 6 个 Controller
+1. **AuthController** - 认证控制器
+   - `POST /auth/login` - 用户登录（返回JWT）
+   - `POST /auth/register` - 用户注册
+   - `GET /auth/me` - 获取当前用户信息
+   - `POST /auth/logout` - 登出
+   - `POST /auth/refresh` - 刷新JWT令牌
 
-#### 1. AuthController（认证）
-- 接口：
-  - `POST /auth/login` - 用户登录（返回JWT）
-  - `POST /auth/register` - 用户注册
-  - `GET /auth/me` - 获取当前用户信息
-  - `POST /auth/logout` - 登出（可选）
-  - `POST /auth/refresh` - 刷新JWT令牌
+2. **UserController** - 用户管理控制器
+   - `GET /users` - 获取用户列表（分页，管理员）
+   - `POST /users` - 创建用户（管理员）
+   - `GET /users/{id}` - 获取用户详情
+   - `PUT /users/{id}` - 更新用户信息
+   - `DELETE /users/{id}` - 删除用户（管理员）
+   - `PUT /users/{id}/role` - 修改用户角色（管理员）
 
-#### 2. UserController（用户管理）
-- 接口：
-  - `GET /users` - 获取用户列表（分页，管理员）
-  - `POST /users` - 创建用户（管理员）
-  - `GET /users/{id}` - 获取用户详情
-  - `PUT /users/{id}` - 更新用户信息
-  - `DELETE /users/{id}` - 删除用户（管理员）
-  - `PUT /users/{id}/role` - 修改用户角色（管理员）
+3. **MedicineController** - 药品管理控制器
+   - `GET /medicines` - 获取药品列表（分页、搜索、筛选）
+   - `GET /medicines/{id}` - 获取药品详情
+   - `POST /medicines` - 创建药品（管理员/药师）
+   - `PUT /medicines/{id}` - 更新药品信息
+   - `DELETE /medicines/{id}` - 删除药品（管理员）
+   - `GET /medicines/search` - 搜索药品
+   - `GET /medicines/category/{category}` - 按分类查询
+   - `GET /medicines/low-stock` - 查询低库存药品
 
-#### 3. MedicineController（药品管理）
-- 接口：
-  - `GET /medicines` - 获取药品列表（分页、搜索、筛选）
-  - `GET /medicines/{id}` - 获取药品详情
-  - `POST /medicines` - 创建药品（管理员/药师）
-  - `PUT /medicines/{id}` - 更新药品信息
-  - `DELETE /medicines/{id}` - 删除药品（管理员）
-  - `GET /medicines/search` - 搜索药品
-  - `GET /medicines/category/{category}` - 按分类查询
-  - `GET /medicines/low-stock` - 查询低库存药品
+4. **StockController** - 库存管理控制器
+   - `POST /stock/in` - 药品入库
+   - `POST /stock/out` - 药品出库
+   - `GET /stock/in` - 获取入库记录列表（分页、筛选）
+   - `GET /stock/out` - 获取出库记录列表（分页、筛选）
+   - `GET /stock/in/{id}` - 获取入库记录详情（待实现findById）
+   - `GET /stock/out/{id}` - 获取出库记录详情（待实现findById）
+   - `GET /stock/medicine/{medicineId}` - 查询药品库存
+   - `GET /stock/statistics` - 库存统计
 
-#### 4. StockController（库存管理）
-- 接口：
-  - `POST /stock/in` - 药品入库
-  - `POST /stock/out` - 药品出库
-  - `GET /stock/in` - 获取入库记录列表（分页、筛选）
-  - `GET /stock/out` - 获取出库记录列表（分页、筛选）
-  - `GET /stock/in/{id}` - 获取入库记录详情
-  - `GET /stock/out/{id}` - 获取出库记录详情
-  - `GET /stock/medicine/{medicineId}` - 查询药品库存
-  - `GET /stock/statistics` - 库存统计
+5. **PrescriptionController** - 处方管理控制器
+   - `POST /prescriptions` - 创建处方
+   - `GET /prescriptions` - 获取处方列表（分页、筛选）
+   - `GET /prescriptions/{id}` - 获取处方详情（包含明细）
+   - `PUT /prescriptions/{id}` - 更新处方信息
+   - `POST /prescriptions/{id}/submit-audit` - 提交审核（调用Python服务）
+   - `POST /prescriptions/{id}/audit` - 人工审核
+   - `POST /prescriptions/{id}/dispense` - 发药
+   - `POST /prescriptions/{id}/cancel` - 取消处方
+   - `GET /prescriptions/{id}/details` - 获取处方明细
+   - `GET /prescriptions/{id}/audit-history` - 获取审核历史
 
-#### 5. PrescriptionController（处方管理）
-- 接口：
-  - `POST /prescriptions` - 创建处方
-  - `GET /prescriptions` - 获取处方列表（分页、筛选）
-  - `GET /prescriptions/{id}` - 获取处方详情（包含明细）
-  - `PUT /prescriptions/{id}` - 更新处方信息
-  - `POST /prescriptions/{id}/submit-audit` - 提交审核（调用Python服务）
-  - `POST /prescriptions/{id}/audit` - 人工审核
-  - `POST /prescriptions/{id}/dispense` - 发药
-  - `POST /prescriptions/{id}/cancel` - 取消处方
-  - `GET /prescriptions/{id}/details` - 获取处方明细
-  - `GET /prescriptions/{id}/audit-history` - 获取审核历史
+6. **AuditController** - 审核记录控制器
+   - `GET /audit/records` - 获取审核记录列表（分页、筛选）
+   - `GET /audit/records/{id}` - 获取审核记录详情
+   - `GET /audit/records/prescription/{prescriptionId}` - 获取处方的审核历史
+   - `GET /audit/statistics` - 审核统计
 
-#### 6. AuditController（审核记录）
-- 接口：
-  - `GET /audit/records` - 获取审核记录列表（分页、筛选）
-  - `GET /audit/records/{id}` - 获取审核记录详情
-  - `GET /audit/records/prescription/{prescriptionId}` - 获取处方的审核历史
-  - `GET /audit/statistics` - 审核统计
+### 已创建的 DTO 类
+
+**统一响应格式：**
+- `ApiResponse<T>` - 统一API响应格式
+- `PageResponse<T>` - 分页响应格式
+
+**请求DTO：**
+- `LoginRequest` - 登录请求
+- `RegisterRequest` - 注册请求
+- `RefreshTokenRequest` - 刷新令牌请求
+
+**响应DTO：**
+- `LoginResponse` - 登录响应
+- `UserResponse` - 用户信息响应
+
+### 实现要点
+
+1. 权限控制：
+   - 使用 `SecurityContextHolder` 获取当前认证用户
+   - 实现角色检查方法（`isAdmin()`, `isAdminOrPharmacist()`, `isDoctorOrAdmin()`）
+   - 管理员、药师、医生等角色的权限控制
+
+2. 统一响应格式：
+   - 所有接口使用 `ApiResponse<T>` 统一响应格式
+   - 分页接口使用 `PageResponse<T>`
+
+3. 异常处理：
+   - 使用 try-catch 捕获异常
+   - 返回适当的 HTTP 状态码和错误消息
+
+4. 数据验证：
+   - 使用 `@Valid` 注解验证请求体
+   - 使用 JSR-303 验证注解（`@NotBlank`, `@Size` 等）
+
+5. 分页实现：
+   - 简单分页实现（实际项目中建议使用 Spring Data 的 `Pageable`）
+
+6. 业务逻辑：
+   - Controller 层调用 Service 层处理业务逻辑
+   - 保持 Controller 层简洁，不包含复杂业务逻辑
+
 
 ---
 

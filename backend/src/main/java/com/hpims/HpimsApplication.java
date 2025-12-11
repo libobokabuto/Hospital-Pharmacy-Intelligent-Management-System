@@ -44,24 +44,31 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * ✅ PrescriptionDetailService - 处方明细业务逻辑
  * ✅ AuditRecordService - 审核记录业务逻辑
  *
- * ⏳ 五、控制器层（Controller）- 6个待实现
- * ⏳ AuthController - 用户认证API
- *   - POST /auth/login, POST /auth/register, GET /auth/me, POST /auth/refresh
- * ⏳ UserController - 用户管理API
- *   - GET /users, POST /users, GET /users/{id}, PUT /users/{id}, DELETE /users/{id}
- * ⏳ MedicineController - 药品管理API
+ * ✅ 五、控制器层（Controller）- 6个已完成
+ * ✅ AuthController - 用户认证API
+ *   - POST /auth/login, POST /auth/register, GET /auth/me, POST /auth/refresh, POST /auth/logout
+ * ✅ UserController - 用户管理API
+ *   - GET /users, POST /users, GET /users/{id}, PUT /users/{id}, DELETE /users/{id}, PUT /users/{id}/role
+ * ✅ MedicineController - 药品管理API
  *   - GET /medicines, POST /medicines, PUT /medicines/{id}, DELETE /medicines/{id}
- * ⏳ StockController - 库存管理API（入库/出库）
+ *   - GET /medicines/search, GET /medicines/category/{category}, GET /medicines/low-stock
+ * ✅ StockController - 库存管理API（入库/出库）
  *   - POST /stock/in, POST /stock/out, GET /stock/in, GET /stock/out
- * ⏳ PrescriptionController - 处方管理API
- *   - POST /prescriptions, GET /prescriptions, POST /prescriptions/{id}/submit-audit
- * ⏳ AuditController - 审核记录管理API
+ *   - GET /stock/medicine/{medicineId}, GET /stock/statistics
+ * ✅ PrescriptionController - 处方管理API
+ *   - POST /prescriptions, GET /prescriptions, GET /prescriptions/{id}
+ *   - POST /prescriptions/{id}/submit-audit, POST /prescriptions/{id}/audit
+ *   - POST /prescriptions/{id}/dispense, POST /prescriptions/{id}/cancel
+ *   - GET /prescriptions/{id}/details, GET /prescriptions/{id}/audit-history
+ * ✅ AuditController - 审核记录管理API
  *   - GET /audit/records, GET /audit/records/{id}
+ *   - GET /audit/records/prescription/{prescriptionId}, GET /audit/statistics
  *
- * ⏳ 六、DTO类 - 约15个待实现
- * ⏳ 请求DTO: LoginRequest, RegisterRequest, MedicineCreateRequest, StockInRequest等
- * ⏳ 响应DTO: LoginResponse, UserResponse, MedicineResponse, PrescriptionResponse等
- * ⏳ 通用DTO: ApiResponse<T>, PageResponse<T>
+ * ✅ 六、DTO类 - 基础DTO已完成
+ * ✅ 请求DTO: LoginRequest, RegisterRequest, RefreshTokenRequest
+ * ✅ 响应DTO: LoginResponse, UserResponse
+ * ✅ 通用DTO: ApiResponse<T>, PageResponse<T>
+ * ⏳ 其他DTO: MedicineResponse, StockInResponse, StockOutResponse, PrescriptionResponse等（可选，当前直接使用Model）
  *
  * ⏳ 七、Python服务集成 - 待实现
  * ⏳ AuditServiceClient - HTTP客户端（调用Python审核服务）

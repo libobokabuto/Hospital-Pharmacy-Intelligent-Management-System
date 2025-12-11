@@ -1,0 +1,211 @@
+package com.hpims.controller;
+
+import com.hpims.dto.ApiResponse;
+import com.hpims.dto.request.LoginRequest;
+import com.hpims.dto.request.RegisterRequest;
+import com.hpims.dto.request.RefreshTokenRequest;
+import com.hpims.dto.response.LoginResponse;
+import com.hpims.dto.response.UserResponse;
+import com.hpims.model.User;
+import com.hpims.security.JwtUtil;
+import com.hpims.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.time.LocalDateTime;
+
+/**
+ * 认证控制器
+ */
+@RestController
+@RequestMapping("/auth")
+@CrossOrigin
+public class AuthController {
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    /**
+     * 用户登录
+     */
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+        try {
+            // 验证用户
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+            );
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            // 获取用户信息
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            User user = userService.findByUsername(userDetails.getUsername());
+
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("用户不存在"));
+            }
+
+            // 生成JWT令牌
+            String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
+
+            // 构建响应
+            LoginResponse response = LoginResponse.builder()
+                    .token(token)
+                    .username(user.getUsername())
+                    .role(user.getRole())
+                    .realName(user.getRealName())
+                    .userId(user.getId())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("登录成功", response));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("用户名或密码错误"));
+        }
+    }
+
+    /**
+     * 用户注册
+     */
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody RegisterRequest request) {
+        try {
+            // 检查用户名是否已存在
+            if (userService.existsByUsername(request.getUsername())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error("用户名已存在"));
+            }
+
+            // 创建新用户
+            User user = User.builder()
+                    .username(request.getUsername())
+                    .password(passwordEncoder.encode(request.getPassword()))
+                    .role(request.getRole())
+                    .realName(request.getRealName())
+                    .department(request.getDepartment())
+                    .createTime(LocalDateTime.now())
+                    .updateTime(LocalDateTime.now())
+                    .build();
+
+            User savedUser = userService.save(user);
+
+            // 构建响应
+            UserResponse response = UserResponse.builder()
+                    .id(savedUser.getId())
+                    .username(savedUser.getUsername())
+                    .role(savedUser.getRole())
+                    .realName(savedUser.getRealName())
+                    .department(savedUser.getDepartment())
+                    .createTime(savedUser.getCreateTime())
+                    .updateTime(savedUser.getUpdateTime())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("注册成功", response));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("注册失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 获取当前用户信息
+     */
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+
+            User user = userService.findByUsername(username);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("用户不存在"));
+            }
+
+            UserResponse response = UserResponse.builder()
+                    .id(user.getId())
+                    .username(user.getUsername())
+                    .role(user.getRole())
+                    .realName(user.getRealName())
+                    .department(user.getDepartment())
+                    .createTime(user.getCreateTime())
+                    .updateTime(user.getUpdateTime())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success(response));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("获取用户信息失败"));
+        }
+    }
+
+    /**
+     * 刷新JWT令牌
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<LoginResponse>> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        try {
+            String token = request.getToken();
+            String username = jwtUtil.extractUsername(token);
+
+            // 验证令牌
+            if (!jwtUtil.validateToken(token, username)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("令牌无效或已过期"));
+            }
+
+            // 获取用户信息
+            User user = userService.findByUsername(username);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("用户不存在"));
+            }
+
+            // 生成新令牌
+            String newToken = jwtUtil.generateToken(user.getUsername(), user.getRole());
+
+            LoginResponse response = LoginResponse.builder()
+                    .token(newToken)
+                    .username(user.getUsername())
+                    .role(user.getRole())
+                    .realName(user.getRealName())
+                    .userId(user.getId())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("令牌刷新成功", response));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("令牌刷新失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 登出（可选，JWT无状态，客户端删除token即可）
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<String>> logout() {
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.ok(ApiResponse.success("登出成功", null));
+    }
+}
+
