@@ -4,6 +4,7 @@ import com.hpims.dto.ApiResponse;
 import com.hpims.dto.PageResponse;
 import com.hpims.dto.request.RegisterRequest;
 import com.hpims.dto.response.UserResponse;
+import com.hpims.exception.BusinessException;
 import com.hpims.model.User;
 import com.hpims.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -112,7 +113,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable Long id) {
         try {
             User user = userService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("用户不存在"));
+                    .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "用户不存在"));
 
             return ResponseEntity.ok(ApiResponse.success(convertToResponse(user)));
         } catch (Exception e) {
@@ -130,7 +131,7 @@ public class UserController {
             @RequestBody RegisterRequest request) {
         try {
             User user = userService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("用户不存在"));
+                    .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "用户不存在"));
 
             // 检查权限：只能更新自己的信息，或管理员可以更新任何用户
             String currentUsername = getCurrentUsername();
@@ -194,7 +195,7 @@ public class UserController {
             }
 
             User user = userService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("用户不存在"));
+                    .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "用户不存在"));
 
             user.setRole(role);
             user.setUpdateTime(LocalDateTime.now());

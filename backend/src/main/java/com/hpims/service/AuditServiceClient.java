@@ -1,6 +1,7 @@
 package com.hpims.service;
 
 import com.hpims.dto.response.AuditResultDto;
+import com.hpims.exception.BusinessException;
 import com.hpims.model.Medicine;
 import com.hpims.model.Prescription;
 import com.hpims.model.PrescriptionDetail;
@@ -70,11 +71,11 @@ public class AuditServiceClient {
             // 检查响应
             AuditResultDto.AuditServiceResponse serviceResponse = response.getBody();
             if (serviceResponse == null) {
-                throw new RuntimeException("Python审核服务返回空响应");
+                throw new BusinessException("AUDIT_SERVICE_ERROR", "Python审核服务返回空响应");
             }
 
             if (!Boolean.TRUE.equals(serviceResponse.getSuccess())) {
-                throw new RuntimeException("Python审核服务返回错误: " + serviceResponse.getMessage());
+                throw new BusinessException("AUDIT_SERVICE_ERROR", "Python审核服务返回错误: " + serviceResponse.getMessage());
             }
 
             AuditResultDto result = serviceResponse.getData();
@@ -83,7 +84,7 @@ public class AuditServiceClient {
 
         } catch (RestClientException e) {
             logger.error("调用Python审核服务失败: {}", e.getMessage(), e);
-            throw new RuntimeException("调用Python审核服务失败: " + e.getMessage(), e);
+            throw new BusinessException("AUDIT_SERVICE_ERROR", "调用Python审核服务失败: " + e.getMessage(), e);
         }
     }
 

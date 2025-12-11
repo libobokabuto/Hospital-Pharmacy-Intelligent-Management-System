@@ -1,5 +1,7 @@
 package com.hpims.service;
 
+import com.hpims.exception.MedicineNotFoundException;
+import com.hpims.exception.StockInsufficientException;
 import com.hpims.model.Medicine;
 import com.hpims.repository.MedicineRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +31,7 @@ public class MedicineService {
      */
     public Medicine findById(Long id) {
         return medicineRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("药品不存在，ID: " + id));
+                .orElseThrow(() -> new MedicineNotFoundException(id));
     }
 
     /**
@@ -68,7 +70,7 @@ public class MedicineService {
     @Transactional
     public void delete(Long id) {
         if (!medicineRepository.existsById(id)) {
-            throw new RuntimeException("药品不存在，ID: " + id);
+            throw new MedicineNotFoundException(id);
         }
         medicineRepository.deleteById(id);
     }
@@ -99,7 +101,11 @@ public class MedicineService {
         int newStock = medicine.getStockQuantity() + quantity;
         
         if (newStock < 0) {
-            throw new RuntimeException("库存不足，当前库存: " + medicine.getStockQuantity() + "，需要: " + Math.abs(quantity));
+            throw new StockInsufficientException(
+                medicine.getId(),
+                medicine.getStockQuantity(),
+                Math.abs(quantity)
+            );
         }
         
         medicine.setStockQuantity(newStock);

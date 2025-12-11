@@ -1,5 +1,6 @@
 package com.hpims.service;
 
+import com.hpims.exception.BusinessException;
 import com.hpims.model.StockIn;
 import com.hpims.repository.StockInRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,10 +63,10 @@ public class StockInService {
      */
     public List<StockIn> findByDateRange(LocalDate start, LocalDate end) {
         if (start == null || end == null) {
-            throw new RuntimeException("开始日期和结束日期不能为空");
+            throw new BusinessException("INVALID_DATE_RANGE", "开始日期和结束日期不能为空");
         }
         if (start.isAfter(end)) {
-            throw new RuntimeException("开始日期不能晚于结束日期");
+            throw new BusinessException("INVALID_DATE_RANGE", "开始日期不能晚于结束日期");
         }
         return stockInRepository.findByInDateBetween(start, end);
     }
@@ -76,7 +77,7 @@ public class StockInService {
     @Transactional
     public void processStockIn(StockIn stockIn) {
         if (stockIn == null || stockIn.getMedicineId() == null || stockIn.getQuantity() == null) {
-            throw new RuntimeException("入库记录信息不完整");
+            throw new BusinessException("INCOMPLETE_STOCK_IN_RECORD", "入库记录信息不完整");
         }
         
         // 更新药品库存（增加）

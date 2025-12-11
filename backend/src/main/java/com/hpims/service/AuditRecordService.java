@@ -1,5 +1,6 @@
 package com.hpims.service;
 
+import com.hpims.exception.BusinessException;
 import com.hpims.model.AuditRecord;
 import com.hpims.repository.AuditRecordRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,7 +51,7 @@ public class AuditRecordService {
      */
     public AuditRecord findById(Long id) {
         return auditRecordRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("审核记录不存在，ID: " + id));
+                .orElseThrow(() -> new BusinessException("AUDIT_RECORD_NOT_FOUND", "审核记录不存在，ID: " + id));
     }
 
     /**

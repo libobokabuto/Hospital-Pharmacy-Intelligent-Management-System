@@ -1,5 +1,7 @@
 package com.hpims.service;
 
+import com.hpims.exception.BusinessException;
+import com.hpims.exception.StockInsufficientException;
 import com.hpims.model.Medicine;
 import com.hpims.model.StockOut;
 import com.hpims.repository.StockOutRepository;
@@ -63,10 +65,10 @@ public class StockOutService {
      */
     public List<StockOut> findByDateRange(LocalDate start, LocalDate end) {
         if (start == null || end == null) {
-            throw new RuntimeException("开始日期和结束日期不能为空");
+            throw new BusinessException("INVALID_DATE_RANGE", "开始日期和结束日期不能为空");
         }
         if (start.isAfter(end)) {
-            throw new RuntimeException("开始日期不能晚于结束日期");
+            throw new BusinessException("INVALID_DATE_RANGE", "开始日期不能晚于结束日期");
         }
         return stockOutRepository.findByOutDateBetween(start, end);
     }
@@ -77,18 +79,16 @@ public class StockOutService {
     @Transactional
     public void processStockOut(StockOut stockOut) {
         if (stockOut == null || stockOut.getMedicineId() == null || stockOut.getQuantity() == null) {
-            throw new RuntimeException("出库记录信息不完整");
+            throw new BusinessException("INCOMPLETE_STOCK_OUT_RECORD", "出库记录信息不完整");
         }
         
         // 检查库存是否充足
         Medicine medicine = medicineService.findById(stockOut.getMedicineId());
         if (medicine.getStockQuantity() < stockOut.getQuantity()) {
-            throw new RuntimeException(
-                String.format("库存不足，药品: %s，当前库存: %d，需要: %d",
-                    medicine.getName(),
-                    medicine.getStockQuantity(),
-                    stockOut.getQuantity()
-                )
+            throw new StockInsufficientException(
+                medicine.getName(),
+                medicine.getStockQuantity(),
+                stockOut.getQuantity()
             );
         }
         

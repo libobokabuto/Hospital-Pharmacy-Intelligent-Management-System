@@ -1,6 +1,8 @@
 package com.hpims.service;
 
 import com.hpims.dto.response.AuditResultDto;
+import com.hpims.exception.BusinessException;
+import com.hpims.exception.PrescriptionNotFoundException;
 import com.hpims.model.Medicine;
 import com.hpims.model.Prescription;
 import com.hpims.model.PrescriptionDetail;
@@ -56,7 +58,7 @@ public class PrescriptionService {
         } else {
             // 检查处方号是否已存在
             if (prescriptionRepository.findByPrescriptionNumber(prescription.getPrescriptionNumber()).isPresent()) {
-                throw new RuntimeException("处方号已存在: " + prescription.getPrescriptionNumber());
+                throw new BusinessException("PRESCRIPTION_NUMBER_EXISTS", "处方号已存在: " + prescription.getPrescriptionNumber());
             }
         }
 
@@ -89,7 +91,7 @@ public class PrescriptionService {
      */
     public Prescription findById(Long id) {
         return prescriptionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("处方不存在，ID: " + id));
+                .orElseThrow(() -> new PrescriptionNotFoundException(id));
     }
 
     /**
@@ -97,7 +99,7 @@ public class PrescriptionService {
      */
     public Prescription findByPrescriptionNumber(String prescriptionNumber) {
         return prescriptionRepository.findByPrescriptionNumber(prescriptionNumber)
-                .orElseThrow(() -> new RuntimeException("处方不存在，处方号: " + prescriptionNumber));
+                .orElseThrow(() -> new PrescriptionNotFoundException("prescriptionNumber", prescriptionNumber));
     }
 
     /**
@@ -140,13 +142,13 @@ public class PrescriptionService {
 
         // 检查处方状态
         if (!"未审核".equals(prescription.getStatus())) {
-            throw new RuntimeException("只能提交未审核状态的处方进行审核，当前状态: " + prescription.getStatus());
+            throw new BusinessException("INVALID_PRESCRIPTION_STATUS", "只能提交未审核状态的处方进行审核，当前状态: " + prescription.getStatus());
         }
 
         // 检查Python服务是否可用
         if (!auditServiceClient.isServiceAvailable()) {
             logger.warn("Python审核服务不可用，无法进行自动审核");
-            throw new RuntimeException("Python审核服务不可用，请稍后重试");
+            throw new BusinessException("AUDIT_SERVICE_UNAVAILABLE", "Python审核服务不可用，请稍后重试");
         }
 
         // 更新处方状态为"审核中"
@@ -158,7 +160,7 @@ public class PrescriptionService {
             // 获取处方明细
             List<PrescriptionDetail> details = prescriptionDetailService.findByPrescriptionId(prescriptionId);
             if (details == null || details.isEmpty()) {
-                throw new RuntimeException("处方明细为空，无法进行审核");
+                throw new BusinessException("PRESCRIPTION_DETAILS_EMPTY", "处方明细为空，无法进行审核");
             }
 
             // 获取药品信息
@@ -209,12 +211,18 @@ public class PrescriptionService {
             logger.info("审核完成，处方ID: {}, 结果: {}, 得分: {}", 
                     prescriptionId, auditResultStatus, auditResult.getScore());
 
-        } catch (RuntimeException e) {
+        } catch (BusinessException e) {
             // 如果审核失败，将状态回退为"未审核"
             prescription.setStatus("未审核");
             prescription.setUpdateTime(LocalDateTime.now());
             prescriptionRepository.save(prescription);
             throw e;
+        } catch (RuntimeException e) {
+            // 如果审核失败，将状态回退为"未审核"
+            prescription.setStatus("未审核");
+            prescription.setUpdateTime(LocalDateTime.now());
+            prescriptionRepository.save(prescription);
+            throw new BusinessException("AUDIT_FAILED", "审核失败: " + e.getMessage(), e);
         }
     }
 
@@ -282,14 +290,14 @@ public class PrescriptionService {
 
         // 检查处方状态
         if (!"已通过".equals(prescription.getStatus())) {
-            throw new RuntimeException("只能对已通过审核的处方进行发药，当前状态: " + prescription.getStatus());
+            throw new BusinessException("INVALID_PRESCRIPTION_STATUS", "只能对已通过审核的处方进行发药，当前状态: " + prescription.getStatus());
         }
 
         // 获取处方明细
         List<PrescriptionDetail> details = prescriptionDetailService.findByPrescriptionId(prescriptionId);
         
         if (details == null || details.isEmpty()) {
-            throw new RuntimeException("处方明细为空，无法发药");
+            throw new BusinessException("PRESCRIPTION_DETAILS_EMPTY", "处方明细为空，无法发药");
         }
 
         // 扣减库存（通过出库记录）
