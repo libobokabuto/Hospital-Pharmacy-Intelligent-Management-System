@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
+import javax.persistence.*;
 import java.time.LocalDateTime;
 
 /**
@@ -54,13 +55,31 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Entity
+@Table(name = "users")
 public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(unique = true, nullable = false, length = 50)
     private String username;
+
+    @Column(nullable = false)
     private String password;
+
+    @Column(nullable = false, length = 20)
     private String role; // admin, doctor, nurse, pharmacist
+
+    @Column(length = 50)
     private String realName;
+
+    @Column(length = 100)
     private String department;
+
+    @Column(name = "create_time")
     private LocalDateTime createTime;
+
+    @Column(name = "update_time")
     private LocalDateTime updateTime;
 }

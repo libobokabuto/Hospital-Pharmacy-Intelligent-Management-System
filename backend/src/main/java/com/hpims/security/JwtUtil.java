@@ -3,10 +3,12 @@ package com.hpims.security;
 import com.hpims.config.JwtConfig;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -78,10 +80,22 @@ public class JwtUtil {
     }
 
     /**
+     * 获取签名密钥
+     */
+    private SecretKey getSigningKey() {
+        byte[] keyBytes = jwtConfig.getSecret().getBytes(StandardCharsets.UTF_8);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    /**
      * 提取所有声明
      */
     private Claims extractAllClaims(String token) {
-        return Jwts.parser().setSigningKey(jwtConfig.getSecret()).parseClaimsJws(token).getBody();
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     /**
@@ -109,7 +123,7 @@ public class JwtUtil {
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + jwtConfig.getExpiration()))
-                .signWith(SignatureAlgorithm.HS512, jwtConfig.getSecret())
+                .signWith(getSigningKey())
                 .compact();
     }
 
