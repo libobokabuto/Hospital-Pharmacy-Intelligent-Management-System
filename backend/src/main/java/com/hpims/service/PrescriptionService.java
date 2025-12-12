@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -73,35 +74,13 @@ public class PrescriptionService {
 
         // 保存处方主表
         Prescription savedPrescription = prescriptionRepository.save(prescription);
-        logger.info("处方主表保存成功，ID: {}, 处方号: {}", savedPrescription.getId(), savedPrescription.getPrescriptionNumber());
 
         // 保存处方明细
         if (details != null && !details.isEmpty()) {
-            logger.info("开始保存处方明细，数量: {}", details.size());
             for (PrescriptionDetail detail : details) {
-                // 验证明细的有效性
-                if (detail.getMedicineId() == null) {
-                    throw new BusinessException("INVALID_PRESCRIPTION_DETAIL", 
-                            "处方明细无效：药品ID不能为空");
-                }
-                if (detail.getQuantity() == null || detail.getQuantity() <= 0) {
-                    throw new BusinessException("INVALID_PRESCRIPTION_DETAIL", 
-                            "处方明细无效：药品数量必须大于0");
-                }
                 detail.setPrescriptionId(savedPrescription.getId());
-                logger.debug("设置处方明细处方ID: detail.medicineId={}, prescriptionId={}", 
-                        detail.getMedicineId(), savedPrescription.getId());
             }
-            List<PrescriptionDetail> savedDetails = prescriptionDetailService.saveAll(details);
-            if (savedDetails == null || savedDetails.isEmpty()) {
-                throw new BusinessException("PRESCRIPTION_DETAILS_SAVE_FAILED", 
-                        "处方明细保存失败，请检查数据是否有效");
-            }
-            logger.info("处方明细保存成功，实际保存数量: {}", savedDetails.size());
-        } else {
-            logger.warn("处方明细为空，未保存明细");
-            throw new BusinessException("PRESCRIPTION_DETAILS_EMPTY", 
-                    "处方明细不能为空，请至少添加一个药品明细");
+            prescriptionDetailService.saveAll(details);
         }
 
         return savedPrescription;
@@ -308,8 +287,6 @@ public class PrescriptionService {
     @Transactional
     public void dispense(Long prescriptionId) {
         Prescription prescription = findById(prescriptionId);
-        logger.info("开始发药，处方ID: {}, 处方号: {}, 当前状态: {}", 
-                prescriptionId, prescription.getPrescriptionNumber(), prescription.getStatus());
 
         // 检查处方状态
         if (!"已通过".equals(prescription.getStatus())) {
@@ -318,24 +295,19 @@ public class PrescriptionService {
 
         // 获取处方明细
         List<PrescriptionDetail> details = prescriptionDetailService.findByPrescriptionId(prescriptionId);
-        logger.info("查询到处方明细数量: {}", details != null ? details.size() : 0);
         
         if (details == null || details.isEmpty()) {
-            logger.error("处方ID {} 的明细为空，无法发药", prescriptionId);
-            throw new BusinessException("PRESCRIPTION_DETAILS_EMPTY", 
-                    "处方明细为空，无法发药。请检查处方ID: " + prescriptionId + " 是否有对应的处方明细记录。");
+            throw new BusinessException("PRESCRIPTION_DETAILS_EMPTY", "处方明细为空，无法发药");
         }
 
         // 扣减库存（通过出库记录）
         for (PrescriptionDetail detail : details) {
             // 创建出库记录
-            // 注意：reason 字段在数据库中为 ENUM('prescription', 'loss', 'expired', 'other')
-            // 处方发药应使用 'prescription'
             com.hpims.model.StockOut stockOut = com.hpims.model.StockOut.builder()
                     .medicineId(detail.getMedicineId())
                     .quantity(detail.getQuantity())
                     .outDate(java.time.LocalDate.now())
-                    .reason("prescription") // 使用ENUM值
+                    .reason("处方发药 - " + prescription.getPrescriptionNumber())
                     .operator("系统") // 实际应从当前登录用户获取
                     .build();
             
@@ -352,38 +324,11 @@ public class PrescriptionService {
 
     /**
      * 生成处方号
-     * 格式：RX + 8位日期(yyyyMMdd) + 3位序号
-     * 示例：RX20250101001
      */
     private String generatePrescriptionNumber() {
-        // 格式: RX + 日期(yyyyMMdd) + 3位序号
+        // 格式: P + 日期(yyyyMMdd) + 随机字符串
         String dateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String prefix = "RX" + dateStr;
-        
-        // 查询当天已生成的处方号
-        List<Prescription> todayPrescriptions = prescriptionRepository.findByPrescriptionNumberStartingWith(prefix);
-        
-        // 找到最大的序号
-        int maxSeq = 0;
-        for (Prescription p : todayPrescriptions) {
-            String num = p.getPrescriptionNumber();
-            if (num != null && num.length() == 13 && num.startsWith(prefix)) {
-                try {
-                    int seq = Integer.parseInt(num.substring(10)); // 提取最后3位序号
-                    if (seq > maxSeq) {
-                        maxSeq = seq;
-                    }
-                } catch (NumberFormatException e) {
-                    // 忽略格式不正确的处方号
-                }
-            }
-        }
-        
-        // 生成下一个序号（3位数字，从001开始）
-        int nextSeq = maxSeq + 1;
-        String seqStr = String.format("%03d", nextSeq);
-        
-        return prefix + seqStr;
+        String randomStr = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return "P" + dateStr + randomStr;
     }
 }
-

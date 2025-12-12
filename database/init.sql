@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS stock_in (
 );
 
 -- 创建出库记录表
+-- reason: ENUM('prescription','loss','expired','other') - prescription=处方发药, loss=盘亏, expired=过期, other=其他
 CREATE TABLE IF NOT EXISTS stock_out (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     medicine_id BIGINT NOT NULL,
@@ -50,7 +51,7 @@ CREATE TABLE IF NOT EXISTS stock_out (
     quantity INT NOT NULL,
     out_date DATE NOT NULL,
     operator VARCHAR(50),
-    reason VARCHAR(100),
+    reason ENUM('prescription', 'loss', 'expired', 'other') COMMENT 'prescription=处方发药, loss=盘亏, expired=过期, other=其他',
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (medicine_id) REFERENCES medicine(id)
 );
@@ -61,7 +62,7 @@ CREATE TABLE IF NOT EXISTS prescription (
     prescription_number VARCHAR(50) NOT NULL UNIQUE,
     patient_name VARCHAR(50) NOT NULL,
     patient_age INT,
-    patient_gender VARCHAR(10),
+    patient_gender VARCHAR(20),
     doctor_name VARCHAR(50),
     department VARCHAR(50),
     create_date DATE NOT NULL,
@@ -87,11 +88,13 @@ CREATE TABLE IF NOT EXISTS prescription_detail (
 );
 
 -- 创建审核记录表
+-- audit_type: ENUM('auto','manual') - auto=自动审核, manual=人工审核
+-- audit_result: ENUM('pass','warning','reject') - pass=通过, warning=警告, reject=拒绝
 CREATE TABLE IF NOT EXISTS audit_record (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     prescription_id BIGINT NOT NULL,
-    audit_type VARCHAR(20) DEFAULT '自动审核',
-    audit_result VARCHAR(20) NOT NULL,
+    audit_type ENUM('auto','manual') DEFAULT 'auto' COMMENT 'auto=自动审核, manual=人工审核',
+    audit_result ENUM('pass','warning','reject') NOT NULL DEFAULT 'pass' COMMENT 'pass=通过, warning=警告, reject=拒绝',
     audit_score DECIMAL(5,2),
     issues_found TEXT,
     suggestions TEXT,
@@ -138,15 +141,18 @@ INSERT IGNORE INTO stock_in (medicine_id, batch_number, quantity, supplier, in_d
 (3, 'BATCH20241203', 200, '医药公司C', '2024-12-03', '王库管');
 
 -- 插入出库记录（避免重复插入）
+-- 注意：reason字段使用ENUM值：'prescription'（处方发药）, 'loss'（盘亏）, 'expired'（过期）, 'other'（其他）
 INSERT IGNORE INTO stock_out (medicine_id, batch_number, quantity, out_date, operator, reason) VALUES
-(1, 'BATCH20241201', 20, '2024-12-08', '药房管理员', '处方发药'),
-(2, 'BATCH20241202', 10, '2024-12-08', '药房管理员', '处方发药');
+(1, 'BATCH20241201', 20, '2024-12-08', '药房管理员', 'prescription'),
+(2, 'BATCH20241202', 10, '2024-12-08', '药房管理员', 'prescription');
 
 -- 插入审核记录（避免重复插入）
+-- 注意：audit_type使用ENUM值：'auto'（自动审核）, 'manual'（人工审核）
+-- audit_result使用ENUM值：'pass'（通过）, 'warning'（警告）, 'reject'（拒绝）
 INSERT IGNORE INTO audit_record (prescription_id, audit_type, audit_result, audit_score, issues_found, suggestions, auditor) VALUES
-(1, '自动审核', '通过', 95.5, '无明显问题', '建议按时服药', '系统审核'),
-(2, '人工审核', '通过', 98.0, '剂量合理', '继续治疗', '王药师'),
-(3, '自动审核', '待审核', NULL, '正在审核中', NULL, '系统审核');
+(1, 'auto', 'pass', 95.5, '无明显问题', '建议按时服药', '系统审核'),
+(2, 'manual', 'pass', 98.0, '剂量合理', '继续治疗', '王药师'),
+(3, 'auto', 'pass', NULL, '正在审核中', NULL, '系统审核');
 
 -- 检查用户表
 SELECT id, username, role, real_name FROM users;
