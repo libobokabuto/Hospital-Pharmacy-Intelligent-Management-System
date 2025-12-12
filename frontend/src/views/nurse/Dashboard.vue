@@ -1,6 +1,5 @@
 <template>
-  <Layout>
-    <div class="nurse-dashboard">
+  <div class="nurse-dashboard">
       <h2 class="page-title">护士工作台</h2>
 
       <el-card shadow="hover">
@@ -26,12 +25,10 @@
         </el-table>
       </el-card>
     </div>
-  </Layout>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import Layout from '@/components/Layout.vue'
 import { prescriptionAPI } from '@/api'
 import { ElMessage } from 'element-plus'
 import { formatDate } from '@/utils/format'

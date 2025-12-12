@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,6 +76,32 @@ public class StockController {
                         .body(ApiResponse.error("权限不足，需要管理员或药师权限"));
             }
 
+            // 转换reason值：如果前端传入中文，转换为ENUM值
+            // 数据库字段类型是 enum('prescription', 'loss', 'expired', 'other')
+            String reason = stockOut.getReason();
+            if (reason != null && !reason.isEmpty()) {
+                String normalizedReason = reason.toLowerCase().trim();
+                // 如果已经是ENUM值，直接使用
+                if ("prescription".equals(normalizedReason) || "loss".equals(normalizedReason) 
+                    || "expired".equals(normalizedReason) || "other".equals(normalizedReason)) {
+                    stockOut.setReason(normalizedReason);
+                } else {
+                    // 如果是中文，转换为ENUM值
+                    if (reason.contains("处方") || reason.contains("发药")) {
+                        stockOut.setReason("prescription");
+                    } else if (reason.contains("盘亏") || reason.contains("丢失")) {
+                        stockOut.setReason("loss");
+                    } else if (reason.contains("过期")) {
+                        stockOut.setReason("expired");
+                    } else {
+                        stockOut.setReason("other");
+                    }
+                }
+            } else {
+                // 如果没有提供reason，默认使用 "prescription"
+                stockOut.setReason("prescription");
+            }
+
             // 设置操作人
             String operator = getCurrentUsername();
             stockOut.setOperator(operator != null ? operator : "系统");
@@ -109,12 +136,20 @@ public class StockController {
             }
 
             // 简单分页实现
+            int total = records.size();
             int start = page * size;
-            int end = Math.min(start + size, records.size());
-            List<StockIn> pagedRecords = records.subList(Math.min(start, records.size()), end);
+            int end = Math.min(start + size, total);
+            
+            // 处理边界情况：如果start超过列表大小，返回空列表
+            List<StockIn> pagedRecords;
+            if (start >= total || total == 0) {
+                pagedRecords = new ArrayList<>();
+            } else {
+                pagedRecords = records.subList(start, end);
+            }
 
             PageResponse<StockIn> pageResponse = PageResponse.of(
-                    pagedRecords, records.size(), page, size);
+                    pagedRecords, total, page, size);
 
             return ResponseEntity.ok(ApiResponse.success(pageResponse));
         } catch (Exception e) {
@@ -145,12 +180,20 @@ public class StockController {
             }
 
             // 简单分页实现
+            int total = records.size();
             int start = page * size;
-            int end = Math.min(start + size, records.size());
-            List<StockOut> pagedRecords = records.subList(Math.min(start, records.size()), end);
+            int end = Math.min(start + size, total);
+            
+            // 处理边界情况：如果start超过列表大小，返回空列表
+            List<StockOut> pagedRecords;
+            if (start >= total || total == 0) {
+                pagedRecords = new ArrayList<>();
+            } else {
+                pagedRecords = records.subList(start, end);
+            }
 
             PageResponse<StockOut> pageResponse = PageResponse.of(
-                    pagedRecords, records.size(), page, size);
+                    pagedRecords, total, page, size);
 
             return ResponseEntity.ok(ApiResponse.success(pageResponse));
         } catch (Exception e) {

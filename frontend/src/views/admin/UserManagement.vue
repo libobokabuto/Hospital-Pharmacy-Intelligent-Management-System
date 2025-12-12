@@ -1,6 +1,5 @@
 <template>
-  <Layout>
-    <div class="user-management">
+  <div class="user-management">
       <div class="page-header">
         <h2>用户管理</h2>
         <el-button type="primary" @click="handleCreate">
@@ -137,12 +136,10 @@
         </template>
       </el-dialog>
     </div>
-  </Layout>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import Layout from '@/components/Layout.vue'
 import { userAPI } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'

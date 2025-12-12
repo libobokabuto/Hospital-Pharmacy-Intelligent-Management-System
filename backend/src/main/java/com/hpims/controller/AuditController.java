@@ -4,6 +4,8 @@ import com.hpims.dto.ApiResponse;
 import com.hpims.dto.PageResponse;
 import com.hpims.model.AuditRecord;
 import com.hpims.service.AuditRecordService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,8 @@ import java.util.Map;
 @RequestMapping("/audit")
 @CrossOrigin
 public class AuditController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuditController.class);
 
     @Autowired
     private AuditRecordService auditRecordService;
@@ -114,13 +118,24 @@ public class AuditController {
     @GetMapping("/statistics")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getAuditStatistics() {
         try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            logger.info("审核统计接口被调用，当前认证用户: {}", auth != null ? auth.getName() : "未认证");
+            
             // 检查权限：管理员或药师
             if (!isAdminOrPharmacist()) {
+                String userInfo = auth != null ? auth.getName() + ", authorities: " + auth.getAuthorities() : "未认证";
+                logger.warn("权限不足，访问审核统计接口需要管理员或药师权限。用户信息: {}", userInfo);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(ApiResponse.error("权限不足，需要管理员或药师权限"));
             }
 
+            logger.debug("开始查询所有审核记录");
             List<AuditRecord> allRecords = auditRecordService.findAll();
+            if (allRecords == null) {
+                logger.warn("审核记录列表为null，初始化为空列表");
+                allRecords = new java.util.ArrayList<>();
+            }
+            logger.debug("查询到审核记录数量: {}", allRecords.size());
 
             int totalRecords = allRecords.size();
             int passedCount = 0;
@@ -130,19 +145,28 @@ public class AuditController {
             int manualAuditCount = 0;
 
             for (AuditRecord record : allRecords) {
+                if (record == null) {
+                    continue;
+                }
+                
                 String result = record.getAuditResult();
-                if ("通过".equals(result) || "已通过".equals(result)) {
-                    passedCount++;
-                } else if ("拒绝".equals(result) || "已拒绝".equals(result)) {
-                    rejectedCount++;
-                } else if ("待审核".equals(result)) {
-                    pendingCount++;
+                if (result != null) {
+                    if ("通过".equals(result) || "已通过".equals(result)) {
+                        passedCount++;
+                    } else if ("拒绝".equals(result) || "已拒绝".equals(result)) {
+                        rejectedCount++;
+                    } else if ("待审核".equals(result)) {
+                        pendingCount++;
+                    }
                 }
 
-                if ("自动审核".equals(record.getAuditType())) {
-                    autoAuditCount++;
-                } else if ("人工审核".equals(record.getAuditType())) {
-                    manualAuditCount++;
+                String auditType = record.getAuditType();
+                if (auditType != null) {
+                    if ("自动审核".equals(auditType)) {
+                        autoAuditCount++;
+                    } else if ("人工审核".equals(auditType)) {
+                        manualAuditCount++;
+                    }
                 }
             }
 
@@ -155,8 +179,10 @@ public class AuditController {
             statistics.put("manualAuditCount", manualAuditCount);
             statistics.put("passRate", totalRecords > 0 ? (double) passedCount / totalRecords * 100 : 0);
 
+            logger.debug("审核统计查询成功，总记录数: {}", totalRecords);
             return ResponseEntity.ok(ApiResponse.success(statistics));
         } catch (Exception e) {
+            logger.error("获取审核统计失败", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("获取审核统计失败: " + e.getMessage()));
         }

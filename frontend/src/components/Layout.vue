@@ -122,6 +122,11 @@ const menuItems = computed(() => {
         title: '审核记录',
         icon: 'DataAnalysis',
       },
+      {
+        path: '/admin/settings',
+        title: '系统设置',
+        icon: 'Setting',
+      },
     ],
     doctor: [
       {

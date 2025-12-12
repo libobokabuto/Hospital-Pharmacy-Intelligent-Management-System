@@ -1,6 +1,5 @@
 <template>
-  <Layout>
-    <div class="prescription-management">
+  <div class="prescription-management">
       <div class="page-header">
         <h2>处方管理</h2>
         <el-button type="primary" @click="handleCreate" v-if="isDoctor">
@@ -116,7 +115,13 @@
 
       <!-- 处方详情对话框 -->
       <el-dialog v-model="detailDialogVisible" title="处方详情" width="800px">
-        <div v-if="currentPrescription">
+        <template #header>
+          <div style="display: flex; justify-content: space-between; align-items: center; width: 100%">
+            <span>处方详情</span>
+            <el-button type="primary" @click="handlePrint" :icon="Printer">打印</el-button>
+          </div>
+        </template>
+        <div v-if="currentPrescription" id="prescription-print-content">
           <el-descriptions :column="2" border>
             <el-descriptions-item label="处方号">
               {{ currentPrescription.prescriptionNumber }}
@@ -215,15 +220,13 @@
         </template>
       </el-dialog>
     </div>
-  </Layout>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import Layout from '@/components/Layout.vue'
 import { prescriptionAPI } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search } from '@element-plus/icons-vue'
+import { Plus, Search, Printer } from '@element-plus/icons-vue'
 import { formatDate } from '@/utils/format'
 import { useUserStore } from '@/stores/user'
 
@@ -423,6 +426,122 @@ const handleSizeChange = (size) => {
   pagination.size = size
   pagination.page = 1
   loadPrescriptions()
+}
+
+const handlePrint = () => {
+  const printContent = document.getElementById('prescription-print-content')
+  if (!printContent || !currentPrescription.value) return
+
+  // 创建打印内容的HTML
+  const printHTML = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>处方详情 - ${currentPrescription.value.prescriptionNumber || ''}</title>
+        <style>
+          @media print {
+            @page {
+              margin: 15mm;
+              size: A4;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+            }
+          }
+          body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            padding: 20px;
+            font-size: 14px;
+            color: #333;
+          }
+          .print-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #333;
+          }
+          .print-header h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            font-weight: bold;
+          }
+          .print-header .hospital-name {
+            font-size: 18px;
+            margin-bottom: 5px;
+          }
+          .prescription-info {
+            margin: 20px 0;
+          }
+          .prescription-info table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          .prescription-info table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+          }
+          .prescription-info table td:first-child {
+            background-color: #f5f7fa;
+            font-weight: bold;
+            width: 120px;
+          }
+          .medicine-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+          }
+          .medicine-table th,
+          .medicine-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+          }
+          .medicine-table th {
+            background-color: #f5f7fa;
+            font-weight: bold;
+            text-align: center;
+          }
+          .print-footer {
+            margin-top: 40px;
+            text-align: right;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+          }
+          .print-footer .doctor-sign {
+            margin-bottom: 50px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-header">
+          <div class="hospital-name">医院药房智能管理系统</div>
+          <h1>处方详情</h1>
+        </div>
+        ${printContent.innerHTML}
+        <div class="print-footer">
+          <div class="doctor-sign">
+            <div>医生签名：${currentPrescription.value.doctorName || ''}</div>
+            <div style="margin-top: 20px;">日期：${formatDate(currentPrescription.value.createDate) || ''}</div>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  const printWindow = window.open('', '_blank')
+  printWindow.document.write(printHTML)
+  printWindow.document.close()
+  
+  // 等待内容加载后打印
+  printWindow.onload = () => {
+    setTimeout(() => {
+      printWindow.focus()
+      printWindow.print()
+    }, 250)
+  }
 }
 
 onMounted(() => {

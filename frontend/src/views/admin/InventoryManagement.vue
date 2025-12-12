@@ -1,6 +1,5 @@
 <template>
-  <Layout>
-    <div class="inventory-management">
+  <div class="inventory-management">
       <div class="page-header">
         <h2>库存管理</h2>
         <div>
@@ -53,6 +52,60 @@
 
       <!-- 标签页 -->
       <el-tabs v-model="activeTab" class="tabs-container">
+        <el-tab-pane label="批次管理" name="batch">
+          <el-card shadow="never">
+            <el-form :inline="true" :model="batchSearchForm" class="search-form">
+              <el-form-item label="批号">
+                <el-input
+                  v-model="batchSearchForm.batchNumber"
+                  placeholder="请输入批号"
+                  clearable
+                  style="width: 200px"
+                />
+              </el-form-item>
+              <el-form-item label="药品ID">
+                <el-input-number
+                  v-model="batchSearchForm.medicineId"
+                  :min="1"
+                  placeholder="药品ID"
+                  clearable
+                  style="width: 150px"
+                />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" @click="handleBatchSearch">
+                  <el-icon><Search /></el-icon>
+                  搜索
+                </el-button>
+                <el-button @click="handleBatchReset">重置</el-button>
+              </el-form-item>
+            </el-form>
+            <el-table
+              v-loading="loadingBatch"
+              :data="batchList"
+              style="width: 100%"
+              stripe
+            >
+              <el-table-column prop="batchNumber" label="批号" width="150" />
+              <el-table-column prop="medicineId" label="药品ID" width="100" />
+              <el-table-column prop="quantity" label="总数量" width="100" />
+              <el-table-column prop="inDate" label="入库日期" width="120">
+                <template #default="{ row }">
+                  {{ formatDate(row.inDate) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="supplier" label="供应商" min-width="150" />
+              <el-table-column prop="operator" label="操作人" width="120" />
+              <el-table-column label="操作" width="100" fixed="right">
+                <template #default="{ row }">
+                  <el-button type="primary" size="small" @click="handleViewBatch(row)">
+                    查看详情
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-card>
+        </el-tab-pane>
         <el-tab-pane label="入库记录" name="in">
           <el-card shadow="never">
             <el-table
@@ -199,20 +252,19 @@
         </template>
       </el-dialog>
     </div>
-  </Layout>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import Layout from '@/components/Layout.vue'
 import { stockAPI } from '@/api'
 import { ElMessage } from 'element-plus'
-import { Plus, Minus } from '@element-plus/icons-vue'
+import { Plus, Minus, Search } from '@element-plus/icons-vue'
 import { formatMoney, formatDate } from '@/utils/format'
 
 const activeTab = ref('in')
 const loadingIn = ref(false)
 const loadingOut = ref(false)
+const loadingBatch = ref(false)
 const submitting = ref(false)
 const showStockInDialog = ref(false)
 const showStockOutDialog = ref(false)
@@ -240,6 +292,12 @@ const paginationOut = reactive({
 
 const stockInList = ref([])
 const stockOutList = ref([])
+const batchList = ref([])
+
+const batchSearchForm = reactive({
+  batchNumber: '',
+  medicineId: null,
+})
 
 const stockInForm = reactive({
   medicineId: null,
@@ -376,10 +434,47 @@ const handleStockOut = async () => {
   }
 }
 
+const handleBatchSearch = async () => {
+  loadingBatch.value = true
+  try {
+    const params = {}
+    if (batchSearchForm.batchNumber) {
+      params.batchNumber = batchSearchForm.batchNumber
+    }
+    if (batchSearchForm.medicineId) {
+      params.medicineId = batchSearchForm.medicineId
+    }
+
+    // 查询入库记录中的批次
+    const response = await stockAPI.getStockInRecords(params)
+    if (response.success) {
+      batchList.value = response.data.content || []
+    }
+  } catch (error) {
+    ElMessage.error('查询批次失败')
+  } finally {
+    loadingBatch.value = false
+  }
+}
+
+const handleBatchReset = () => {
+  batchSearchForm.batchNumber = ''
+  batchSearchForm.medicineId = null
+  handleBatchSearch()
+}
+
+const handleViewBatch = (row) => {
+  // 切换到入库记录标签页并筛选
+  activeTab.value = 'in'
+  ElMessage.info('已切换到入库记录页面，请查看该批号的详细信息')
+}
+
 onMounted(() => {
   loadStatistics()
   loadStockIn()
   loadStockOut()
+  // 默认加载批次列表
+  handleBatchSearch()
 })
 </script>
 

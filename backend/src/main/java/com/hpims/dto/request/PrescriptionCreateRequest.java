@@ -1,5 +1,6 @@
 package com.hpims.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import javax.validation.Valid;
@@ -25,12 +26,14 @@ public class PrescriptionCreateRequest {
 
     private String department;
 
+    private String status; // 处方状态，默认"未审核"
+
     @NotNull(message = "处方日期不能为空")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate createDate;
 
     @NotNull(message = "处方明细不能为空")
     @Size(min = 1, message = "至少需要一条处方明细")
-    @Valid
-    private List<PrescriptionDetailRequest> details;
+    private List<@Valid PrescriptionDetailRequest> details;
 }
 

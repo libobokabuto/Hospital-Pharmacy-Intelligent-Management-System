@@ -1,5 +1,7 @@
 package com.hpims.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonGetter;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -34,16 +36,54 @@ public class AuditRecord {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "prescription_id", insertable = false, updatable = false)
+    @JsonIgnore
     private Prescription prescription;
 
     @Size(max = 20, message = "审核类型长度不能超过20个字符")
-    @Column(name = "audit_type", length = 20)
-    private String auditType; // 自动审核、人工审核
+    @Column(name = "audit_type", columnDefinition = "ENUM('auto','manual')")
+    private String auditType; // auto=自动审核, manual=人工审核
 
     @NotBlank(message = "审核结果不能为空")
-    @Size(max = 20, message = "审核结果长度不能超过20个字符")
-    @Column(name = "audit_result", nullable = false, length = 20)
-    private String auditResult; // 通过、拒绝、待审核
+    @Column(name = "audit_result", nullable = false, columnDefinition = "ENUM('pass','warning','reject')")
+    private String auditResult; // pass=通过, warning=警告, reject=拒绝
+
+    /**
+     * JSON序列化时，将ENUM值转换为中文
+     */
+    @JsonGetter("auditType")
+    public String getAuditTypeForJson() {
+        if (auditType == null) {
+            return null;
+        }
+        switch (auditType) {
+            case "auto":
+                return "自动审核";
+            case "manual":
+                return "人工审核";
+            default:
+                return auditType;
+        }
+    }
+
+    /**
+     * JSON序列化时，将ENUM值转换为中文
+     */
+    @JsonGetter("auditResult")
+    public String getAuditResultForJson() {
+        if (auditResult == null) {
+            return null;
+        }
+        switch (auditResult) {
+            case "pass":
+                return "通过";
+            case "warning":
+                return "警告";
+            case "reject":
+                return "拒绝";
+            default:
+                return auditResult;
+        }
+    }
 
     @DecimalMin(value = "0.0", message = "审核得分不能小于0")
     @DecimalMax(value = "100.0", message = "审核得分不能大于100")
@@ -73,7 +113,7 @@ public class AuditRecord {
             auditTime = LocalDateTime.now();
         }
         if (auditType == null || auditType.isEmpty()) {
-            auditType = "自动审核";
+            auditType = "auto"; // 使用ENUM值
         }
     }
 }

@@ -38,5 +38,10 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Long
      * 根据创建日期范围查找处方列表
      */
     List<Prescription> findByCreateDateBetween(LocalDate startDate, LocalDate endDate);
+
+    /**
+     * 根据处方号前缀查找处方列表（用于生成序号）
+     */
+    List<Prescription> findByPrescriptionNumberStartingWith(String prefix);
 }
 

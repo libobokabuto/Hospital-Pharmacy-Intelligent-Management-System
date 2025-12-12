@@ -1,6 +1,5 @@
 <template>
-  <Layout>
-    <div class="doctor-dashboard">
+  <div class="doctor-dashboard">
       <h2 class="page-title">医生工作台</h2>
 
       <el-row :gutter="20">
@@ -65,12 +64,10 @@
         </el-col>
       </el-row>
     </div>
-  </Layout>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import Layout from '@/components/Layout.vue'
 import { prescriptionAPI } from '@/api'
 import { ElMessage } from 'element-plus'
 import { formatDate } from '@/utils/format'

@@ -1,5 +1,7 @@
 package com.hpims.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonGetter;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -32,6 +34,7 @@ public class StockOut {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "medicine_id", insertable = false, updatable = false)
+    @JsonIgnore
     private Medicine medicine;
 
     @Size(max = 50, message = "批次号长度不能超过50个字符")
@@ -51,9 +54,30 @@ public class StockOut {
     @Column(length = 50)
     private String operator;
 
-    @Size(max = 100, message = "出库原因长度不能超过100个字符")
-    @Column(length = 100)
-    private String reason;
+    @Column(name = "reason", columnDefinition = "ENUM('prescription', 'loss', 'expired', 'other')")
+    private String reason; // prescription=处方发药, loss=盘亏, expired=过期, other=其他
+
+    /**
+     * JSON序列化时，将ENUM值转换为中文
+     */
+    @JsonGetter("reason")
+    public String getReasonForJson() {
+        if (reason == null) {
+            return null;
+        }
+        switch (reason) {
+            case "prescription":
+                return "处方发药";
+            case "loss":
+                return "盘亏";
+            case "expired":
+                return "过期";
+            case "other":
+                return "其他";
+            default:
+                return reason;
+        }
+    }
 
     @Column(name = "create_time")
     private LocalDateTime createTime;

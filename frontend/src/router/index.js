@@ -12,15 +12,21 @@ const MedicineManagement = () => import('@/views/admin/MedicineManagement.vue')
 const InventoryManagement = () => import('@/views/admin/InventoryManagement.vue')
 const UserManagement = () => import('@/views/admin/UserManagement.vue')
 const PrescriptionManagement = () => import('@/views/pharmacist/PrescriptionManagement.vue')
+const AdminAuditManagement = () => import('@/views/admin/AuditManagement.vue')
+const SystemSettings = () => import('@/views/admin/SystemSettings.vue')
 
 // 医生页面
 const DoctorDashboard = () => import('@/views/doctor/Dashboard.vue')
+const DoctorPrescriptionManagement = () => import('@/views/doctor/DoctorPrescriptionManagement.vue')
 
 // 护士页面
 const NurseDashboard = () => import('@/views/nurse/Dashboard.vue')
+const NursePrescriptionManagement = () => import('@/views/nurse/NursePrescriptionManagement.vue')
 
 // 药师页面
 const PharmacistDashboard = () => import('@/views/pharmacist/Dashboard.vue')
+const PharmacistInventoryManagement = () => import('@/views/pharmacist/PharmacistInventoryManagement.vue')
+const PharmacistAuditManagement = () => import('@/views/pharmacist/AuditManagement.vue')
 
 const routes = [
   {
@@ -69,6 +75,18 @@ const routes = [
         component: PrescriptionManagement,
         meta: { title: '处方管理' }
       },
+      {
+        path: 'audit',
+        name: 'AdminAuditManagement',
+        component: AdminAuditManagement,
+        meta: { title: '审核记录' }
+      },
+      {
+        path: 'settings',
+        name: 'SystemSettings',
+        component: SystemSettings,
+        meta: { title: '系统设置' }
+      },
     ]
   },
   // 医生路由
@@ -83,6 +101,12 @@ const routes = [
         component: DoctorDashboard,
         meta: { title: '医生工作台' }
       },
+      {
+        path: 'prescriptions',
+        name: 'DoctorPrescriptionManagement',
+        component: DoctorPrescriptionManagement,
+        meta: { title: '我的处方' }
+      },
     ]
   },
   // 护士路由
@@ -96,6 +120,12 @@ const routes = [
         name: 'NurseDashboard',
         component: NurseDashboard,
         meta: { title: '护士工作台' }
+      },
+      {
+        path: 'prescriptions',
+        name: 'NursePrescriptionManagement',
+        component: NursePrescriptionManagement,
+        meta: { title: '处方查询' }
       },
     ]
   },
@@ -116,6 +146,18 @@ const routes = [
         name: 'PrescriptionManagement',
         component: PrescriptionManagement,
         meta: { title: '处方管理' }
+      },
+      {
+        path: 'inventory',
+        name: 'PharmacistInventoryManagement',
+        component: PharmacistInventoryManagement,
+        meta: { title: '库存管理' }
+      },
+      {
+        path: 'audit',
+        name: 'PharmacistAuditManagement',
+        component: PharmacistAuditManagement,
+        meta: { title: '审核记录' }
       },
     ]
   }

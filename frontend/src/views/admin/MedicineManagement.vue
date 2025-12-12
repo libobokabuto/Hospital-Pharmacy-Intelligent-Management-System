@@ -1,6 +1,5 @@
 <template>
-  <Layout>
-    <div class="medicine-management">
+  <div class="medicine-management">
       <div class="page-header">
         <h2>药品管理</h2>
         <el-button type="primary" @click="handleCreate">
@@ -158,12 +157,10 @@
         </template>
       </el-dialog>
     </div>
-  </Layout>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import Layout from '@/components/Layout.vue'
 import { medicineAPI } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'

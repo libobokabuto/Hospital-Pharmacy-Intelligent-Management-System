@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import javax.persistence.*;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -31,6 +32,7 @@ public class PrescriptionDetail {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "prescription_id", insertable = false, updatable = false)
+    @JsonIgnore
     private Prescription prescription;
 
     @NotNull(message = "药品ID不能为空")
@@ -39,6 +41,7 @@ public class PrescriptionDetail {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "medicine_id", insertable = false, updatable = false)
+    @JsonIgnore
     private Medicine medicine;
 
     @NotNull(message = "数量不能为空")

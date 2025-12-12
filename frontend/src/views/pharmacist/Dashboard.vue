@@ -1,6 +1,5 @@
 <template>
-  <Layout>
-    <div class="pharmacist-dashboard">
+  <div class="pharmacist-dashboard">
       <h2 class="page-title">药师工作台</h2>
 
       <el-row :gutter="20" class="stats-row">
@@ -88,13 +87,11 @@
         </el-col>
       </el-row>
     </div>
-  </Layout>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import Layout from '@/components/Layout.vue'
 import { prescriptionAPI, medicineAPI } from '@/api'
 import { formatDate } from '@/utils/format'
 

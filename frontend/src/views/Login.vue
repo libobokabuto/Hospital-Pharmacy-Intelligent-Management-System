@@ -35,6 +35,10 @@
         </el-form-item>
 
         <el-form-item>
+          <el-checkbox v-model="loginForm.remember">记住密码</el-checkbox>
+        </el-form-item>
+
+        <el-form-item>
           <el-button
             type="primary"
             size="large"
@@ -55,7 +59,7 @@
 </template>
 
 <script>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { User, Lock } from '@element-plus/icons-vue'
@@ -76,8 +80,24 @@ export default {
 
     const loginForm = reactive({
       username: '',
-      password: ''
+      password: '',
+      remember: false
     })
+
+    // 从localStorage加载保存的用户名和密码
+    const loadSavedCredentials = () => {
+      const savedUsername = localStorage.getItem('savedUsername')
+      const savedPassword = localStorage.getItem('savedPassword')
+      const remember = localStorage.getItem('rememberPassword') === 'true'
+      
+      if (remember && savedUsername) {
+        loginForm.username = savedUsername
+        loginForm.remember = true
+      }
+      if (remember && savedPassword) {
+        loginForm.password = savedPassword
+      }
+    }
 
     const loginRules = {
       username: [
@@ -106,6 +126,17 @@ export default {
         const result = await userStore.login(loginForm.username, loginForm.password)
 
         if (result.success) {
+          // 处理记住密码
+          if (loginForm.remember) {
+            localStorage.setItem('savedUsername', loginForm.username)
+            localStorage.setItem('savedPassword', loginForm.password)
+            localStorage.setItem('rememberPassword', 'true')
+          } else {
+            localStorage.removeItem('savedUsername')
+            localStorage.removeItem('savedPassword')
+            localStorage.removeItem('rememberPassword')
+          }
+
           ElMessage.success('登录成功')
 
           // 根据角色跳转到对应页面
@@ -148,6 +179,11 @@ export default {
         loading.value = false
       }
     }
+
+    // 组件挂载时加载保存的凭证
+    onMounted(() => {
+      loadSavedCredentials()
+    })
 
     return {
       loginFormRef,

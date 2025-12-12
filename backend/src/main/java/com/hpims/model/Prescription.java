@@ -28,7 +28,7 @@ public class Prescription {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "处方号不能为空")
+    // 处方号：创建时可以为空（后端会自动生成），更新时不能为空
     @PrescriptionNumber
     @Column(name = "prescription_number", unique = true, nullable = false, length = 50)
     private String prescriptionNumber;
@@ -41,8 +41,8 @@ public class Prescription {
     @Column(name = "patient_age")
     private Integer patientAge;
 
-    @Size(max = 10, message = "患者性别长度不能超过10个字符")
-    @Column(name = "patient_gender", length = 10)
+    @Size(max = 20, message = "患者性别长度不能超过20个字符")
+    @Column(name = "patient_gender", length = 20)
     private String patientGender;
 
     @Size(max = 50, message = "医生姓名长度不能超过50个字符")
@@ -75,6 +75,7 @@ public class Prescription {
     private LocalDateTime updateTime;
 
     @OneToMany(mappedBy = "prescription", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties("prescription")
     private List<PrescriptionDetail> details;
 
     @PrePersist

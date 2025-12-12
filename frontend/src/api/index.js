@@ -27,7 +27,16 @@ api.interceptors.request.use(
 // 响应拦截器
 api.interceptors.response.use(
   (response) => {
-    const data = response.data
+    let data = response.data
+    // 如果 data 是字符串，尝试解析为 JSON
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data)
+      } catch (e) {
+        console.error('解析响应数据失败:', e, data)
+        return { success: false, message: '响应数据格式错误', data: null }
+      }
+    }
     // 如果响应数据已经是处理过的格式（有success字段），直接返回
     if (data && typeof data.success !== 'undefined') {
       return data
@@ -52,7 +61,10 @@ api.interceptors.response.use(
           ElMessage.error('接口不存在')
           break
         case 500:
-          ElMessage.error('服务器错误')
+          // 尝试显示后端返回的具体错误信息
+          const errorMsg = data?.message || '服务器错误'
+          ElMessage.error(errorMsg)
+          console.error('服务器错误详情:', data)
           break
         default:
           ElMessage.error(data?.message || '请求失败')
@@ -138,9 +150,10 @@ export const stockAPI = {
 // ==================== 处方管理API ====================
 export const prescriptionAPI = {
   // 创建处方
-  createPrescription: (data, details) => {
-    const requestData = { ...data, details }
-    return api.post('/prescriptions', requestData)
+  createPrescription: (data) => {
+    // data 应该已经包含 details 字段
+    console.log('API层接收到的数据:', JSON.stringify(data, null, 2))
+    return api.post('/prescriptions', data)
   },
   // 获取处方列表（分页、筛选）
   getPrescriptions: (params) => api.get('/prescriptions', { params }),

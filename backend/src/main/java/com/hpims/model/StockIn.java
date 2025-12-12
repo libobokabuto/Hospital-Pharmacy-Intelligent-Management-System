@@ -1,5 +1,6 @@
 package com.hpims.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -32,6 +33,7 @@ public class StockIn {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "medicine_id", insertable = false, updatable = false)
+    @JsonIgnore
     private Medicine medicine;
 
     @Size(max = 50, message = "批次号长度不能超过50个字符")
