@@ -57,6 +57,9 @@ public class MedicineService {
         existingMedicine.setPrice(medicine.getPrice());
         existingMedicine.setCategory(medicine.getCategory());
         existingMedicine.setApprovalNumber(medicine.getApprovalNumber());
+        existingMedicine.setIndication(medicine.getIndication());
+        existingMedicine.setContraindication(medicine.getContraindication());
+        existingMedicine.setInteractions(medicine.getInteractions());
         existingMedicine.setMinStock(medicine.getMinStock());
         
         // 注意：更新时不修改库存数量，库存数量应通过updateStock方法更新

@@ -19,6 +19,8 @@
           <el-table-column prop="id" label="ID" width="80" />
           <el-table-column prop="username" label="用户名" width="150" />
           <el-table-column prop="realName" label="真实姓名" width="120" />
+          <el-table-column prop="employeeNumber" label="职工号" width="120" />
+          <el-table-column prop="title" label="职称" width="120" />
           <el-table-column prop="role" label="角色" width="120">
             <template #default="{ row }">
               <el-tag :type="getRoleTagType(row.role)">
@@ -166,6 +168,8 @@ const formData = reactive({
   username: '',
   password: '',
   realName: '',
+  employeeNumber: '',
+  title: '',
   role: '',
   department: '',
 })
@@ -232,6 +236,8 @@ const handleEdit = (row) => {
     username: row.username,
     password: '',
     realName: row.realName,
+    employeeNumber: row.employeeNumber || '',
+    title: row.title || '',
     role: row.role,
     department: row.department,
   })
@@ -328,6 +334,8 @@ const resetForm = () => {
     username: '',
     password: '',
     realName: '',
+    employeeNumber: '',
+    title: '',
     role: '',
     department: '',
   })

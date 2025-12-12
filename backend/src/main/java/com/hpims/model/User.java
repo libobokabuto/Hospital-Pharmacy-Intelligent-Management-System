@@ -79,6 +79,14 @@ public class User {
     @Column(length = 50)
     private String realName;
 
+    @Size(max = 50, message = "职工号长度不能超过50个字符")
+    @Column(name = "employee_number", unique = true, length = 50)
+    private String employeeNumber; // 职工号
+
+    @Size(max = 50, message = "职称长度不能超过50个字符")
+    @Column(length = 50)
+    private String title; // 职称，如：主任医师、副主任医师、主治医师、住院医师、主管药师、药师等
+
     @Column(length = 100)
     private String department;
 

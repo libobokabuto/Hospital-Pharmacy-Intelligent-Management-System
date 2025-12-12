@@ -22,6 +22,11 @@ public class RegisterRequest {
     private String role; // admin, doctor, nurse, pharmacist
 
     private String realName;
+
+    private String employeeNumber; // 职工号
+
+    private String title; // 职称，如：主任医师、副主任医师、主治医师、住院医师、主管药师、药师等
+
     private String department;
 }
 

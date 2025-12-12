@@ -19,6 +19,8 @@ public class UserResponse {
     private String username;
     private String role;
     private String realName;
+    private String employeeNumber; // 职工号
+    private String title; // 职称
     private String department;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

@@ -127,6 +127,33 @@
           </el-col>
         </el-row>
 
+        <el-form-item label="患者症状/病症" prop="patientSymptoms">
+          <el-input
+            v-model="prescriptionForm.patientSymptoms"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入患者症状或病症"
+          />
+        </el-form-item>
+
+        <el-form-item label="诊断" prop="diagnosis">
+          <el-input
+            v-model="prescriptionForm.diagnosis"
+            placeholder="请输入诊断"
+            maxlength="200"
+            show-word-limit
+          />
+        </el-form-item>
+
+        <el-form-item label="过敏史" prop="allergies">
+          <el-input
+            v-model="prescriptionForm.allergies"
+            type="textarea"
+            :rows="2"
+            placeholder="请输入过敏史（如有）"
+          />
+        </el-form-item>
+
         <el-divider content-position="left">处方明细</el-divider>
         <div v-for="(detail, index) in prescriptionForm.details" :key="index" class="medicine-detail-item">
           <el-row :gutter="10" style="margin-bottom: 10px">
@@ -217,6 +244,15 @@
           <el-descriptions-item label="年龄">{{ currentPrescription.patientAge }}</el-descriptions-item>
           <el-descriptions-item label="性别">{{ currentPrescription.patientGender }}</el-descriptions-item>
           <el-descriptions-item label="科室">{{ currentPrescription.department }}</el-descriptions-item>
+          <el-descriptions-item label="患者症状" :span="2">
+            {{ currentPrescription.patientSymptoms || '暂无' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="诊断" :span="2">
+            {{ currentPrescription.diagnosis || '暂无' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="过敏史" :span="2">
+            {{ currentPrescription.allergies || '无' }}
+          </el-descriptions-item>
           <el-descriptions-item label="处方日期">{{ formatDate(currentPrescription.createDate) }}</el-descriptions-item>
           <el-descriptions-item label="医生">{{ currentPrescription.doctorName }}</el-descriptions-item>
         </el-descriptions>
@@ -343,6 +379,9 @@ const prescriptionForm = reactive({
   patientName: '',
   patientAge: null,
   patientGender: '',
+  patientSymptoms: '',
+  diagnosis: '',
+  allergies: '',
   department: '',
   details: [],
 })
@@ -437,6 +476,9 @@ const resetPrescriptionForm = () => {
   prescriptionForm.patientName = ''
   prescriptionForm.patientAge = null
   prescriptionForm.patientGender = ''
+  prescriptionForm.patientSymptoms = ''
+  prescriptionForm.diagnosis = ''
+  prescriptionForm.allergies = ''
   prescriptionForm.department = ''
   prescriptionForm.details = []
   // 默认添加一行药品明细
@@ -511,6 +553,9 @@ const handleSubmitPrescription = async () => {
       patientName: prescriptionForm.patientName,
       patientAge: prescriptionForm.patientAge,
       patientGender: prescriptionForm.patientGender,
+      patientSymptoms: prescriptionForm.patientSymptoms || '',
+      diagnosis: prescriptionForm.diagnosis || '',
+      allergies: prescriptionForm.allergies || '',
       doctorName: doctorName,
       department: prescriptionForm.department,
       createDate: new Date().toISOString().split('T')[0],

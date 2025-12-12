@@ -93,6 +93,8 @@ public class UserController {
                     .password(passwordEncoder.encode(request.getPassword()))
                     .role(request.getRole())
                     .realName(request.getRealName())
+                    .employeeNumber(request.getEmployeeNumber())
+                    .title(request.getTitle())
                     .department(request.getDepartment())
                     .createTime(LocalDateTime.now())
                     .updateTime(LocalDateTime.now())
@@ -143,6 +145,12 @@ public class UserController {
             // 更新用户信息
             if (request.getRealName() != null) {
                 user.setRealName(request.getRealName());
+            }
+            if (request.getEmployeeNumber() != null) {
+                user.setEmployeeNumber(request.getEmployeeNumber());
+            }
+            if (request.getTitle() != null) {
+                user.setTitle(request.getTitle());
             }
             if (request.getDepartment() != null) {
                 user.setDepartment(request.getDepartment());
@@ -217,6 +225,8 @@ public class UserController {
                 .username(user.getUsername())
                 .role(user.getRole())
                 .realName(user.getRealName())
+                .employeeNumber(user.getEmployeeNumber())
+                .title(user.getTitle())
                 .department(user.getDepartment())
                 .createTime(user.getCreateTime())
                 .updateTime(user.getUpdateTime())

@@ -125,6 +125,11 @@ public class AuditServiceClient {
         patient.put("name", prescription.getPatientName());
         patient.put("age", prescription.getPatientAge());
         patient.put("gender", prescription.getPatientGender());
+        // 添加患者症状和疾病信息（用于适应症匹配）
+        patient.put("symptoms", prescription.getPatientSymptoms());
+        patient.put("conditions", prescription.getPatientConditions());
+        patient.put("allergies", prescription.getAllergies());
+        patient.put("diagnosis", prescription.getDiagnosis());
         prescriptionData.put("patient", patient);
 
         // 构建药品列表
@@ -142,6 +147,10 @@ public class AuditServiceClient {
             medicineData.put("days", detail.getDays());
             medicineData.put("specification", medicine != null ? medicine.getSpecification() : null);
             medicineData.put("category", medicine != null ? medicine.getCategory() : null);
+            // 添加药品适应症和禁忌症信息（用于匹配审核）
+            medicineData.put("indication", medicine != null ? medicine.getIndication() : null);
+            medicineData.put("contraindication", medicine != null ? medicine.getContraindication() : null);
+            medicineData.put("interactions", medicine != null ? medicine.getInteractions() : null);
 
             medicinesList.add(medicineData);
         }

@@ -45,6 +45,19 @@ public class Prescription {
     @Column(name = "patient_gender", length = 20)
     private String patientGender;
 
+    @Column(name = "patient_symptoms", columnDefinition = "TEXT")
+    private String patientSymptoms; // 患者症状/病症
+
+    @Size(max = 200, message = "诊断长度不能超过200个字符")
+    @Column(length = 200)
+    private String diagnosis; // 诊断
+
+    @Column(name = "patient_conditions", columnDefinition = "TEXT")
+    private String patientConditions; // 患者疾病状况
+
+    @Column(columnDefinition = "TEXT")
+    private String allergies; // 过敏史
+
     @Size(max = 50, message = "医生姓名长度不能超过50个字符")
     @Column(name = "doctor_name", length = 50)
     private String doctorName;

@@ -36,5 +36,11 @@ public class MedicineUpdateRequest {
     private String category;
 
     private String approvalNumber;
+
+    private String indication; // 适应症
+
+    private String contraindication; // 禁忌症
+
+    private String interactions; // 药物相互作用
 }
 

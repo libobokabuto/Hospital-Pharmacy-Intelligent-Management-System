@@ -22,6 +22,14 @@ public class PrescriptionCreateRequest {
 
     private String patientGender;
 
+    private String patientSymptoms; // 患者症状/病症
+
+    private String diagnosis; // 诊断
+
+    private String patientConditions; // 患者疾病状况
+
+    private String allergies; // 过敏史
+
     private String doctorName;
 
     private String department;

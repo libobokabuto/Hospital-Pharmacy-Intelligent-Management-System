@@ -101,6 +101,15 @@
           <el-descriptions-item label="年龄">{{ currentPrescription.patientAge }}</el-descriptions-item>
           <el-descriptions-item label="性别">{{ currentPrescription.patientGender }}</el-descriptions-item>
           <el-descriptions-item label="科室">{{ currentPrescription.department }}</el-descriptions-item>
+          <el-descriptions-item label="患者症状" :span="2">
+            {{ currentPrescription.patientSymptoms || '暂无' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="诊断" :span="2">
+            {{ currentPrescription.diagnosis || '暂无' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="过敏史" :span="2">
+            {{ currentPrescription.allergies || '无' }}
+          </el-descriptions-item>
           <el-descriptions-item label="处方日期">{{ formatDate(currentPrescription.createDate) }}</el-descriptions-item>
           <el-descriptions-item label="医生">{{ currentPrescription.doctorName }}</el-descriptions-item>
         </el-descriptions>

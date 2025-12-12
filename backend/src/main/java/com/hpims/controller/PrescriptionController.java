@@ -72,6 +72,10 @@ public class PrescriptionController {
             prescription.setPatientAge(requestMap.get("patientAge") != null ? 
                 ((Number) requestMap.get("patientAge")).intValue() : null);
             prescription.setPatientGender((String) requestMap.get("patientGender"));
+            prescription.setPatientSymptoms((String) requestMap.get("patientSymptoms"));
+            prescription.setDiagnosis((String) requestMap.get("diagnosis"));
+            prescription.setPatientConditions((String) requestMap.get("patientConditions"));
+            prescription.setAllergies((String) requestMap.get("allergies"));
             prescription.setDepartment((String) requestMap.get("department"));
             prescription.setStatus(requestMap.get("status") != null ? (String) requestMap.get("status") : "未审核");
             

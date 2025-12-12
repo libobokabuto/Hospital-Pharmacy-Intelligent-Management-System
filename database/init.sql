@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     role VARCHAR(20) NOT NULL DEFAULT 'administrator',
     real_name VARCHAR(50),
+    employee_number VARCHAR(50) UNIQUE COMMENT '职工号',
+    title VARCHAR(50) COMMENT '职称',
     department VARCHAR(50),
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -25,6 +27,9 @@ CREATE TABLE IF NOT EXISTS medicine (
     min_stock INT DEFAULT 10,
     category VARCHAR(50),
     approval_number VARCHAR(50),
+    indication TEXT COMMENT '适应症',
+    contraindication TEXT COMMENT '禁忌症',
+    interactions TEXT COMMENT '药物相互作用',
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -63,6 +68,10 @@ CREATE TABLE IF NOT EXISTS prescription (
     patient_name VARCHAR(50) NOT NULL,
     patient_age INT,
     patient_gender VARCHAR(20),
+    patient_symptoms TEXT COMMENT '患者症状/病症',
+    diagnosis VARCHAR(200) COMMENT '诊断',
+    patient_conditions TEXT COMMENT '患者疾病状况',
+    allergies TEXT COMMENT '过敏史',
     doctor_name VARCHAR(50),
     department VARCHAR(50),
     create_date DATE NOT NULL,

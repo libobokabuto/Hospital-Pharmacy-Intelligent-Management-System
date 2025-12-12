@@ -60,6 +60,15 @@ public class Medicine {
     @Column(name = "approval_number", length = 50)
     private String approvalNumber;
 
+    @Column(columnDefinition = "TEXT")
+    private String indication; // 适应症
+
+    @Column(columnDefinition = "TEXT")
+    private String contraindication; // 禁忌症
+
+    @Column(columnDefinition = "TEXT")
+    private String interactions; // 药物相互作用
+
     @Column(name = "create_time")
     private LocalDateTime createTime;
 

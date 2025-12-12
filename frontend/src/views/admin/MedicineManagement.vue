@@ -196,6 +196,9 @@ const formData = reactive({
   minStock: 10,
   category: '',
   approvalNumber: '',
+  indication: '',
+  contraindication: '',
+  interactions: '',
 })
 
 const formRules = {
@@ -260,6 +263,9 @@ const handleEdit = (row) => {
     minStock: row.minStock,
     category: row.category,
     approvalNumber: row.approvalNumber,
+    indication: row.indication || '',
+    contraindication: row.contraindication || '',
+    interactions: row.interactions || '',
   })
   dialogVisible.value = true
 }
@@ -330,6 +336,9 @@ const resetForm = () => {
     minStock: 10,
     category: '',
     approvalNumber: '',
+    indication: '',
+    contraindication: '',
+    interactions: '',
   })
   formRef.value?.clearValidate()
 }

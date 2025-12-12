@@ -307,7 +307,7 @@ public class PrescriptionService {
                     .medicineId(detail.getMedicineId())
                     .quantity(detail.getQuantity())
                     .outDate(java.time.LocalDate.now())
-                    .reason("处方发药 - " + prescription.getPrescriptionNumber())
+                    .reason("prescription") // 使用ENUM值：prescription=处方发药
                     .operator("系统") // 实际应从当前登录用户获取
                     .build();
             
