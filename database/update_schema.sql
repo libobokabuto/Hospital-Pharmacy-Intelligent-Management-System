@@ -128,3 +128,5 @@ DESCRIBE stock_out;
 SELECT id, audit_type, audit_result FROM audit_record LIMIT 5;
 SELECT id, reason FROM stock_out LIMIT 5;
 
+
+
