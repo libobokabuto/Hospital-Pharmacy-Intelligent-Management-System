@@ -68,80 +68,346 @@ TODO: 添加缓存机制
 """
 
 import logging
-from flask_restful import Resource, reqparse
-from flask import request, jsonify
+from typing import Dict, Any, List, Optional
 
+from flask import request, jsonify
+from flask_restful import Resource, reqparse
+
+from src.dao.repositories import AuditRecordDAO, PrescriptionDAO
+from src.models import AuditIssueRecord, AuditRecord
 from src.services.audit_service import AuditService, AuditResult, IssueSeverity
 
 logger = logging.getLogger(__name__)
 
 
 class AuditResource(Resource):
-    """处方审核资源"""
+  """处方审核资源"""
 
-    def __init__(self, audit_service: AuditService):
-        self.audit_service = audit_service
+  def __init__(self, audit_service: AuditService, audit_record_dao: AuditRecordDAO, prescription_dao: PrescriptionDAO):
+    self.audit_service = audit_service
+    self.audit_record_dao = audit_record_dao
+    self.prescription_dao = prescription_dao
 
-    def post(self):
-        """审核处方"""
+  def post(self):
+    """审核处方"""
+    try:
+      data = request.get_json()
+      if not data:
+        return {'success': False, 'message': '请求数据不能为空'}, 400
+
+      prescription_data = data.get('prescription')
+      if not prescription_data:
+        return {'success': False, 'message': '处方数据不能为空'}, 400
+
+      audit_report = self.audit_service.audit_prescription(prescription_data)
+
+      try:
+        record_id = self._persist_audit_result(prescription_data, audit_report)
+      except Exception as e:
+        logger.error(f"审核结果持久化失败: {e}", exc_info=True)
+        record_id = None
+
+      result = {
+        'success': True,
+        'data': {
+          'result': audit_report.result.value,
+          'score': audit_report.score,
+          'issues': [
+            {
+              'issue_type': issue.issue_type,
+              'severity': issue.severity.value,
+              'description': issue.description,
+              'suggestion': issue.suggestion,
+              'drug_name': issue.drug_name,
+              'related_drugs': issue.related_drugs,
+            }
+            for issue in audit_report.issues
+          ],
+          'suggestions': audit_report.suggestions,
+          'audit_time': audit_report.audit_time,
+          'audit_record_id': record_id,
+        },
+      }
+
+      logger.info(f"处方审核完成，结果: {audit_report.result.value}, 得分: {audit_report.score}")
+      return result, 200
+
+    except Exception as e:
+      logger.error(f"审核处方时发生错误: {str(e)}")
+      return {'success': False, 'message': f'审核失败: {str(e)}'}, 500
+
+  def get(self):
+    """获取审核服务状态"""
+    return {
+      'success': True,
+      'data': {
+        'service': 'audit-service',
+        'status': 'running',
+        'version': '1.0.0'
+      }
+    }, 200
+
+  def _persist_audit_result(self, prescription_data: Dict[str, Any], audit_report):
+    patient = prescription_data.get('patient', {}) or {}
+
+    issues_dicts: List[Dict[str, Any]] = [
+      {
+        'issue_type': issue.issue_type,
+        'severity': issue.severity.value,
+        'description': issue.description,
+        'suggestion': issue.suggestion,
+        'drug_name': issue.drug_name,
+        'related_drugs': issue.related_drugs,
+      }
+      for issue in audit_report.issues
+    ]
+
+    # MySQL/SQLite 兼容的时间格式（使用数据库默认值也可）
+    audit_time_db = audit_report.audit_time.replace("T", " ").split(".")[0]
+
+    record = AuditRecord(
+      id=None,
+      prescription_id=prescription_data.get('prescription_id') or prescription_data.get('id') or 0,
+      audit_type='自动审核',
+      audit_result=audit_report.result.value,
+      audit_score=audit_report.score,
+      issues_found=issues_dicts,
+      suggestions=audit_report.suggestions,
+      auditor='system',
+      patient_age=patient.get('age'),
+      patient_gender=patient.get('gender'),
+      patient_conditions=patient.get('conditions', []),
+      patient_allergies=patient.get('allergies', []),
+      rule_version=None,
+      engine_version='python-audit-service/1.0.0',
+      audit_time=audit_time_db,
+    )
+
+    record_id = self.audit_record_dao.insert_record(record)
+
+    issues_records = [
+      AuditIssueRecord.from_service_issue(record_id, issue_dict)
+      for issue_dict in issues_dicts
+    ]
+    self.audit_record_dao.bulk_insert_issues(issues_records)
+    self.audit_record_dao.insert_snapshot(record_id, prescription_data)
+
+    # 同步更新处方表状态/结果
+    pres_id = prescription_data.get('prescription_id') or prescription_data.get('id')
+    if pres_id:
+      status_map = {
+        'pass': '已审核',
+        'warning': '待人工审核',
+        'reject': '已拒绝',
+      }
+      status_val = status_map.get(audit_report.result.value, '已审核')
+      audit_text = '; '.join(audit_report.suggestions) if audit_report.suggestions else audit_report.result.value
+      self.prescription_dao.update_audit_result(
+        prescription_id=pres_id,
+        result=audit_report.result.value,
+        audit_time=audit_time_db,
+        status=status_val,
+        audit_result_text=audit_text,
+      )
+    return record_id
+
+
+class BatchAuditResource(Resource):
+  """批量审核资源"""
+
+  def __init__(self, audit_service: AuditService, audit_record_dao: AuditRecordDAO, prescription_dao: PrescriptionDAO):
+    self.audit_service = audit_service
+    self.audit_record_dao = audit_record_dao
+    self.prescription_dao = prescription_dao
+
+  def post(self):
+    try:
+      data = request.get_json()
+      if not data:
+        return {'success': False, 'message': '请求数据不能为空'}, 400
+
+      prescriptions = data.get('prescriptions') or []
+      if not isinstance(prescriptions, list) or not prescriptions:
+        return {'success': False, 'message': 'prescriptions 列表不能为空'}, 400
+
+      results = []
+      for pres in prescriptions:
+        audit_report = self.audit_service.audit_prescription(pres)
         try:
-            # 解析请求数据
-            data = request.get_json()
-            if not data:
-                return {
-                    'success': False,
-                    'message': '请求数据不能为空'
-                }, 400
-
-            prescription_data = data.get('prescription')
-            if not prescription_data:
-                return {
-                    'success': False,
-                    'message': '处方数据不能为空'
-                }, 400
-
-            # 执行审核
-            audit_report = self.audit_service.audit_prescription(prescription_data)
-
-            # 转换审核结果为字典格式
-            result = {
-                'success': True,
-                'data': {
-                    'result': audit_report.result.value,
-                    'score': audit_report.score,
-                    'issues': [
-                        {
-                            'issue_type': issue.issue_type,
-                            'severity': issue.severity.value,
-                            'description': issue.description,
-                            'suggestion': issue.suggestion,
-                            'drug_name': issue.drug_name,
-                            'related_drugs': issue.related_drugs
-                        }
-                        for issue in audit_report.issues
-                    ],
-                    'suggestions': audit_report.suggestions,
-                    'audit_time': audit_report.audit_time
-                }
-            }
-
-            logger.info(f"处方审核完成，结果: {audit_report.result.value}, 得分: {audit_report.score}")
-            return result, 200
-
+          record_id = self._persist_audit_result(pres, audit_report)
         except Exception as e:
-            logger.error(f"审核处方时发生错误: {str(e)}")
-            return {
-                'success': False,
-                'message': f'审核失败: {str(e)}'
-            }, 500
+          logger.error(f"批量审核持久化失败: {e}", exc_info=True)
+          record_id = None
 
-    def get(self):
-        """获取审核服务状态"""
-        return {
-            'success': True,
-            'data': {
-                'service': 'audit-service',
-                'status': 'running',
-                'version': '1.0.0'
+        results.append({
+          'result': audit_report.result.value,
+          'score': audit_report.score,
+          'issues': [
+            {
+              'issue_type': issue.issue_type,
+              'severity': issue.severity.value,
+              'description': issue.description,
+              'suggestion': issue.suggestion,
+              'drug_name': issue.drug_name,
+              'related_drugs': issue.related_drugs,
             }
-        }, 200
+            for issue in audit_report.issues
+          ],
+          'suggestions': audit_report.suggestions,
+          'audit_time': audit_report.audit_time,
+          'audit_record_id': record_id,
+          'prescription_id': pres.get('prescription_id') or pres.get('id')
+        })
+
+      return {'success': True, 'data': {'results': results, 'total': len(results)}}, 200
+
+    except Exception as e:
+      logger.error(f"批量审核失败: {str(e)}", exc_info=True)
+      return {'success': False, 'message': f'批量审核失败: {str(e)}'}, 500
+
+  def _persist_audit_result(self, prescription_data: Dict[str, Any], audit_report):
+    patient = prescription_data.get('patient', {}) or {}
+    issues_dicts: List[Dict[str, Any]] = [
+      {
+        'issue_type': issue.issue_type,
+        'severity': issue.severity.value,
+        'description': issue.description,
+        'suggestion': issue.suggestion,
+        'drug_name': issue.drug_name,
+        'related_drugs': issue.related_drugs,
+      }
+      for issue in audit_report.issues
+    ]
+
+    audit_time_db = audit_report.audit_time.replace("T", " ").split(".")[0]
+
+    record = AuditRecord(
+      id=None,
+      prescription_id=prescription_data.get('prescription_id') or prescription_data.get('id') or 0,
+      audit_type='自动审核',
+      audit_result=audit_report.result.value,
+      audit_score=audit_report.score,
+      issues_found=issues_dicts,
+      suggestions=audit_report.suggestions,
+      auditor='system',
+      patient_age=patient.get('age'),
+      patient_gender=patient.get('gender'),
+      patient_conditions=patient.get('conditions', []),
+      patient_allergies=patient.get('allergies', []),
+      rule_version=None,
+      engine_version='python-audit-service/1.0.0',
+      audit_time=audit_time_db,
+    )
+
+    record_id = self.audit_record_dao.insert_record(record)
+    issues_records = [
+      AuditIssueRecord.from_service_issue(record_id, issue_dict)
+      for issue_dict in issues_dicts
+    ]
+    self.audit_record_dao.bulk_insert_issues(issues_records)
+    self.audit_record_dao.insert_snapshot(record_id, prescription_data)
+
+    pres_id = prescription_data.get('prescription_id') or prescription_data.get('id')
+    if pres_id:
+      status_map = {
+        'pass': '已审核',
+        'warning': '待人工审核',
+        'reject': '已拒绝',
+      }
+      status_val = status_map.get(audit_report.result.value, '已审核')
+      audit_text = '; '.join(audit_report.suggestions) if audit_report.suggestions else audit_report.result.value
+      self.prescription_dao.update_audit_result(
+        prescription_id=pres_id,
+        result=audit_report.result.value,
+        audit_time=audit_time_db,
+        status=status_val,
+        audit_result_text=audit_text,
+      )
+    return record_id
+
+
+class AuditHistoryResource(Resource):
+  """审核历史查询"""
+
+  def __init__(self, audit_record_dao: AuditRecordDAO):
+    self.audit_record_dao = audit_record_dao
+
+  def get(self, prescription_id: Optional[int] = None):
+    try:
+      limit = request.args.get('limit', default=50, type=int)
+      records = self.audit_record_dao.list_history(prescription_id=prescription_id, limit=limit)
+      return {
+        'success': True,
+        'data': [
+          {
+            'id': r.id,
+            'prescription_id': r.prescription_id,
+            'audit_type': r.audit_type,
+            'audit_result': r.audit_result,
+            'audit_score': r.audit_score,
+            'issues_found': r.issues_found,
+            'suggestions': r.suggestions,
+            'auditor': r.auditor,
+            'patient_age': r.patient_age,
+            'patient_gender': r.patient_gender,
+            'patient_conditions': r.patient_conditions,
+            'patient_allergies': r.patient_allergies,
+            'rule_version': r.rule_version,
+            'engine_version': r.engine_version,
+            'audit_time': r.audit_time,
+            'create_time': r.created_at,
+          }
+          for r in records
+        ]
+      }, 200
+    except Exception as e:
+      logger.error(f"查询审核历史失败: {str(e)}", exc_info=True)
+      return {'success': False, 'message': f'查询审核历史失败: {str(e)}'}, 500
+
+
+class PrescriptionQueryResource(Resource):
+  """处方查询（供审核使用）"""
+
+  def __init__(self, prescription_dao: PrescriptionDAO):
+    self.prescription_dao = prescription_dao
+
+  def get(self):
+    try:
+      args = request.args
+      patient_name = args.get('patient_name')
+      doctor_name = args.get('doctor_name')
+      department = args.get('department')
+      status = args.get('status')
+      date_from = args.get('date_from')
+      date_to = args.get('date_to')
+      limit = args.get('limit', default=50, type=int)
+
+      items = self.prescription_dao.search(
+        patient_name=patient_name,
+        doctor_name=doctor_name,
+        department=department,
+        status=status,
+        date_from=date_from,
+        date_to=date_to,
+        limit=limit,
+      )
+
+      data = []
+      for p in items:
+        data.append({
+          'prescription_id': p.prescription_id,
+          'patient_name': getattr(p, 'patient_name', None),
+          'patient': p.patient.to_dict(),
+          'medicines': [m.to_dict() for m in p.medicines],
+          'doctor_name': getattr(p, 'doctor_name', None),
+          'department': getattr(p, 'department', None),
+          'prescription_number': getattr(p, 'prescription_number', None),
+          'create_date': getattr(p, 'create_date', None),
+          'status': getattr(p, 'status', None),
+        })
+
+      return {'success': True, 'data': data, 'total': len(data)}, 200
+
+    except Exception as e:
+      logger.error(f"查询处方失败: {str(e)}", exc_info=True)
+      return {'success': False, 'message': f'查询处方失败: {str(e)}'}, 500

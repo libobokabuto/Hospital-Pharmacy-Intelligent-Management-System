@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>Audit Service API Tester</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 16px; background: #f5f7fa; }
+    h2 { margin-top: 24px; }
+    .card { background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 16px; }
+    textarea { width: 100%; min-height: 140px; font-family: Consolas, monospace; }
+    input, select, button { padding: 6px 10px; margin: 4px 0; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .row label { display: flex; flex-direction: column; font-size: 14px; }
+    .result { white-space: pre-wrap; background: #0b1f33; color: #d6f1ff; padding: 12px; border-radius: 6px; min-height: 80px; }
+  </style>
+</head>
+<body>
+  <h1>Python Audit Service API Tester</h1>
+
+  <div class="card">
+    <h2>单笔审核 POST /api/prescription/audit</h2>
+    <textarea id="single-body">{
+  "prescription": {
+    "prescription_id": 201,
+    "patient": {"age": 35, "gender": "M", "conditions": ["胃溃疡"]},
+    "medicines": [
+      {"medicine_id": 102, "name": "布洛芬缓释胶囊", "quantity": 1, "dosage": "每次2粒", "frequency": "每日3次", "days": 5, "category": "解热镇痛"}
+    ]
+  }
+}</textarea>
+    <button onclick="callApi('single')">发送</button>
+  </div>
+
+  <div class="card">
+    <h2>批量审核 POST /api/prescription/batch-audit</h2>
+    <textarea id="batch-body">{
+  "prescriptions": [
+    {
+      "prescription_id": 201,
+      "patient": {"age": 35, "gender": "M", "conditions": ["胃溃疡"]},
+      "medicines": [
+        {"medicine_id": 102, "name": "布洛芬缓释胶囊", "quantity": 1, "dosage": "每次2粒", "frequency": "每日3次", "days": 5, "category": "解热镇痛"}
+      ]
+    },
+    {
+      "prescription_id": 202,
+      "patient": {"age": 28, "gender": "F", "conditions": ["维生素C缺乏"]},
+      "medicines": [
+        {"medicine_id": 103, "name": "维生素C片", "quantity": 1, "dosage": "每次1片", "frequency": "每日1次", "days": 7, "category": "维生素"}
+      ]
+    }
+  ]
+}</textarea>
+    <button onclick="callApi('batch')">发送</button>
+  </div>
+
+  <div class="card">
+    <h2>历史查询 GET /api/audit/history</h2>
+    <div class="row">
+      <label>prescription_id
+        <input id="history-prescription-id" placeholder="可选" />
+      </label>
+      <label>limit
+        <input id="history-limit" type="number" value="20" />
+      </label>
+    </div>
+    <button onclick="callApi('history')">查询</button>
+  </div>
+
+  <div class="card">
+    <h2>处方详情 GET /api/prescriptions</h2>
+    <p style="margin:4px 0 8px;">用于取回处方头+明细以便直接传给审核接口。</p>
+    <div class="row">
+      <label>patient_name
+        <input id="q-patient" />
+      </label>
+      <label>doctor_name
+        <input id="q-doctor" />
+      </label>
+      <label>department
+        <input id="q-dept" />
+      </label>
+      <label>status
+        <input id="q-status" />
+      </label>
+      <label>date_from (YYYY-MM-DD)
+        <input id="q-from" />
+      </label>
+      <label>date_to (YYYY-MM-DD)
+        <input id="q-to" />
+      </label>
+      <label>limit
+        <input id="q-limit" type="number" value="20" />
+      </label>
+    </div>
+    <button onclick="callApi('prescriptions')">查询</button>
+  </div>
+
+  <div class="card">
+    <h2>处方查询 GET /api/prescriptions</h2>
+    <div class="row">
+      <label>patient_name
+        <input id="cq-patient" />
+      </label>
+      <label>doctor_name
+        <input id="cq-doctor" />
+      </label>
+      <label>department
+        <input id="cq-dept" />
+      </label>
+      <label>status
+        <input id="cq-status" />
+      </label>
+      <label>date_from
+        <input id="cq-from" />
+      </label>
+      <label>date_to
+        <input id="cq-to" />
+      </label>
+      <label>limit
+        <input id="cq-limit" type="number" value="20" />
+      </label>
+    </div>
+    <button onclick="combinedQuery()">查询处方</button>
+    <button onclick="auditSelected()">审核勾选</button>
+    <button onclick="auditAll()">审核全部</button>
+    <div id="combo-list" style="margin-top:12px; overflow-x:auto;"></div>
+  </div>
+
+  <div class="card">
+    <h2>结果</h2>
+    <div id="result" class="result">等待请求...</div>
+  </div>
+
+  <script>
+    const base = 'http://localhost:5000/api';
+    let comboData = [];
+
+    async function callApi(kind) {
+      const output = document.getElementById('result');
+      output.textContent = '请求中...';
+      try {
+        let res;
+        if (kind === 'single') {
+          const body = JSON.parse(document.getElementById('single-body').value);
+          res = await fetch(base + '/prescription/audit', {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+          });
+        } else if (kind === 'batch') {
+          const body = JSON.parse(document.getElementById('batch-body').value);
+          res = await fetch(base + '/prescription/batch-audit', {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+          });
+        } else if (kind === 'history') {
+          const pid = document.getElementById('history-prescription-id').value.trim();
+          const limit = document.getElementById('history-limit').value || '20';
+          const url = pid ? `${base}/audit/history/${pid}?limit=${limit}` : `${base}/audit/history?limit=${limit}`;
+          res = await fetch(url);
+        } else if (kind === 'prescriptions') {
+          const params = new URLSearchParams();
+          const set = (k, id) => { const v = document.getElementById(id).value.trim(); if (v) params.append(k, v); };
+          set('patient_name', 'q-patient');
+          set('doctor_name', 'q-doctor');
+          set('department', 'q-dept');
+          set('status', 'q-status');
+          set('date_from', 'q-from');
+          set('date_to', 'q-to');
+          const limit = document.getElementById('q-limit').value || '20';
+          params.append('limit', limit);
+          const url = `${base}/prescriptions?${params.toString()}`;
+          res = await fetch(url);
+        }
+
+        const text = await res.text();
+        let parsed;
+        try { parsed = JSON.parse(text); } catch (e) { parsed = text; }
+        output.textContent = JSON.stringify({ status: res.status, ok: res.ok, data: parsed }, null, 2);
+      } catch (err) {
+        output.textContent = '请求失败: ' + err;
+      }
+    }
+
+    async function combinedQuery() {
+      const params = new URLSearchParams();
+      const set = (k, id) => { const v = document.getElementById(id).value.trim(); if (v) params.append(k, v); };
+      set('patient_name', 'cq-patient');
+      set('doctor_name', 'cq-doctor');
+      set('department', 'cq-dept');
+      set('status', 'cq-status');
+      set('date_from', 'cq-from');
+      set('date_to', 'cq-to');
+      const limit = document.getElementById('cq-limit').value || '20';
+      params.append('limit', limit);
+      const url = `${base}/prescriptions?${params.toString()}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      comboData = json.data || [];
+      renderComboList();
+      document.getElementById('result').textContent = JSON.stringify({ status: res.status, ok: res.ok, data: json }, null, 2);
+    }
+
+    function renderComboList() {
+      const container = document.getElementById('combo-list');
+      if (!comboData.length) {
+        container.innerHTML = '<div>无数据</div>';
+        return;
+      }
+
+      const medsDetail = meds => (meds || []).map(m => {
+        const parts = [m.name || ''];
+        if (m.dosage) parts.push(`剂量:${m.dosage}`);
+        if (m.frequency) parts.push(`频次:${m.frequency}`);
+        if (m.days) parts.push(`天数:${m.days}`);
+        if (m.quantity) parts.push(`数量:${m.quantity}`);
+        if (m.medicine_id) parts.push(`ID:${m.medicine_id}`);
+        return parts.join(' | ');
+      }).join('<br/>');
+
+      const rows = comboData.map((item, idx) => {
+        const patient = item.patient || {};
+        const conds = Array.isArray(patient.conditions) ? patient.conditions.join('、') : '';
+        return `
+          <tr>
+            <td><input type="checkbox" data-idx="${idx}" /></td>
+            <td>${item.prescription_id ?? ''}</td>
+            <td>${item.prescription_number ?? ''}</td>
+            <td>${item.patient_name ?? ''}</td>
+            <td>${patient.age ?? ''} / ${patient.gender ?? ''}</td>
+            <td>${conds}</td>
+            <td>${item.doctor_name ?? ''}</td>
+            <td>${item.department ?? ''}</td>
+            <td>${item.status ?? ''}</td>
+            <td>${item.create_date ?? ''}</td>
+            <td>${medsDetail(item.medicines)}</td>
+            <td>
+              <button onclick="auditOne(${idx})">审核</button>
+              <button onclick="showDetail(${idx})">详情</button>
+            </td>
+          </tr>`;
+      }).join('');
+
+      const details = comboData.map((item, idx) => `#${idx}:\n${JSON.stringify(item, null, 2)}`).join('\n\n');
+
+      container.innerHTML = `
+        <table border="1" cellspacing="0" cellpadding="6">
+          <thead>
+            <tr>
+              <th>选</th><th>ID</th><th>编号</th><th>患者姓名</th><th>年龄/性别</th><th>病症</th><th>医生</th><th>科室</th><th>状态</th><th>日期</th><th>药品明细</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div style="margin-top:8px;">
+          <div style="font-weight:bold;">处方原始数据：</div>
+          <pre style="background:#f0f2f5; padding:8px; max-height:260px; overflow:auto;">${details}</pre>
+        </div>`;
+    }
+
+    function showDetail(idx) {
+      const item = comboData[idx];
+      if (!item) return;
+      document.getElementById('result').textContent = JSON.stringify(item, null, 2);
+    }
+
+    async function auditOne(idx) {
+      const item = comboData[idx];
+      if (!item) return;
+      const body = { prescription: item };
+      const res = await fetch(base + '/prescription/audit', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+      });
+      const json = await res.json();
+      document.getElementById('result').textContent = JSON.stringify({ status: res.status, ok: res.ok, data: json }, null, 2);
+    }
+
+    async function auditSelected() {
+      const checks = Array.from(document.querySelectorAll('#combo-list input[type="checkbox"]'));
+      const selected = checks.filter(c => c.checked).map(c => comboData[Number(c.dataset.idx)]).filter(Boolean);
+      if (!selected.length) {
+        alert('请勾选至少一条处方');
+        return;
+      }
+      await auditBatch(selected);
+    }
+
+    async function auditAll() {
+      if (!comboData.length) {
+        alert('先查询处方');
+        return;
+      }
+      await auditBatch(comboData);
+    }
+
+    async function auditBatch(list) {
+      const res = await fetch(base + '/prescription/batch-audit', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ prescriptions: list })
+      });
+      const json = await res.json();
+      document.getElementById('result').textContent = JSON.stringify({ status: res.status, ok: res.ok, data: json }, null, 2);
+    }
+  </script>
+</body>
+</html>

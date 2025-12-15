@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS medicine (
     min_stock INT DEFAULT 10,
     category VARCHAR(50),
     approval_number VARCHAR(50),
+    recommended_single_dose DECIMAL(10,2),
+    recommended_daily_dose DECIMAL(10,2),
     indication TEXT COMMENT '适应症',
     contraindication TEXT COMMENT '禁忌症',
     interactions TEXT COMMENT '药物相互作用',
@@ -68,6 +70,7 @@ CREATE TABLE IF NOT EXISTS prescription (
     patient_name VARCHAR(50) NOT NULL,
     patient_age INT,
     patient_gender VARCHAR(20),
+    patient_conditions JSON,
     patient_symptoms TEXT COMMENT '患者症状/病症',
     diagnosis VARCHAR(200) COMMENT '诊断',
     patient_conditions TEXT COMMENT '患者疾病状况',
@@ -96,7 +99,7 @@ CREATE TABLE IF NOT EXISTS prescription_detail (
     FOREIGN KEY (medicine_id) REFERENCES medicine(id)
 );
 
--- 创建审核记录表
+-- 创建审核记录表（扩展患者信息与规则版本）
 -- audit_type: ENUM('auto','manual') - auto=自动审核, manual=人工审核
 -- audit_result: ENUM('pass','warning','reject') - pass=通过, warning=警告, reject=拒绝
 CREATE TABLE IF NOT EXISTS audit_record (
@@ -108,9 +111,246 @@ CREATE TABLE IF NOT EXISTS audit_record (
     issues_found TEXT,
     suggestions TEXT,
     auditor VARCHAR(50),
+    patient_age INT,
+    patient_gender VARCHAR(10),
+    patient_conditions JSON,
+    patient_allergies JSON,
+    rule_version VARCHAR(50),
+    engine_version VARCHAR(50),
     audit_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_audit_record_time (audit_time),
     FOREIGN KEY (prescription_id) REFERENCES prescription(id)
+);
+
+-- 审核问题明细表
+CREATE TABLE IF NOT EXISTS audit_issue (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    audit_record_id BIGINT NOT NULL,
+    issue_type VARCHAR(50) NOT NULL,
+    severity VARCHAR(20) NOT NULL,
+    description TEXT,
+    suggestion TEXT,
+    drug_name VARCHAR(100),
+    related_drugs JSON,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (audit_record_id) REFERENCES audit_record(id)
+);
+
+-- 审核快照表（存储处方原始载荷，便于追溯）
+CREATE TABLE IF NOT EXISTS audit_snapshot (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    audit_record_id BIGINT NOT NULL,
+    prescription_payload JSON NOT NULL,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (audit_record_id) REFERENCES audit_record(id)
+);
+
+-- 审核统计表（按日/月等周期聚合）
+CREATE TABLE IF NOT EXISTS audit_statistics (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    period_date DATE NOT NULL,
+    period_type VARCHAR(20) NOT NULL,
+    total_count INT DEFAULT 0,
+    pass_count INT DEFAULT 0,
+    warning_count INT DEFAULT 0,
+    reject_count INT DEFAULT 0,
+    top_risk_drugs JSON,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_period (period_date, period_type)
+);
+
+-- 审核规则主表
+CREATE TABLE IF NOT EXISTS audit_rule (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    rule_type VARCHAR(50) NOT NULL,
+    severity VARCHAR(20) NOT NULL,
+    enabled TINYINT(1) DEFAULT 1,
+    version VARCHAR(50),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- 审核规则条件
+CREATE TABLE IF NOT EXISTS audit_rule_condition (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    rule_id BIGINT NOT NULL,
+    condition_type VARCHAR(50) NOT NULL,
+    left_value VARCHAR(255),
+    operator VARCHAR(20),
+    right_value VARCHAR(255),
+    metadata JSON,
+    FOREIGN KEY (rule_id) REFERENCES audit_rule(id)
+);
+
+-- 审核规则动作
+CREATE TABLE IF NOT EXISTS audit_rule_action (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    rule_id BIGINT NOT NULL,
+    action_type VARCHAR(50) NOT NULL,
+    message TEXT,
+    suggestion TEXT,
+    FOREIGN KEY (rule_id) REFERENCES audit_rule(id)
+);
+
+-- 药品适应症表
+CREATE TABLE IF NOT EXISTS medicine_indication (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    medicine_id BIGINT NOT NULL,
+    indication VARCHAR(255) NOT NULL,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_medicine_indication (medicine_id, indication),
+    FOREIGN KEY (medicine_id) REFERENCES medicine(id)
+);
+
+-- 药品禁忌/疾病不适宜表
+CREATE TABLE IF NOT EXISTS medicine_contraindication (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    medicine_id BIGINT NOT NULL,
+    contraindication VARCHAR(255) NOT NULL,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_medicine_contra (medicine_id, contraindication),
+    FOREIGN KEY (medicine_id) REFERENCES medicine(id)
+);
+
+-- 药品不良反应表
+CREATE TABLE IF NOT EXISTS medicine_adverse_reaction (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    medicine_id BIGINT NOT NULL,
+    reaction VARCHAR(255) NOT NULL,
+    severity VARCHAR(20),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_medicine_reaction (medicine_id, reaction),
+    FOREIGN KEY (medicine_id) REFERENCES medicine(id)
+);
+
+-- 药品相互作用表
+CREATE TABLE IF NOT EXISTS medicine_interaction (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    medicine_id BIGINT NOT NULL,
+    other_medicine_name VARCHAR(255) NOT NULL,
+    risk_level VARCHAR(20),
+    description TEXT,
+    suggestion TEXT,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_medicine_interaction (medicine_id, other_medicine_name),
+    FOREIGN KEY (medicine_id) REFERENCES medicine(id)
+);
+
+-- 审核问题明细表
+CREATE TABLE IF NOT EXISTS audit_issue (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    audit_record_id BIGINT NOT NULL,
+    issue_type VARCHAR(50) NOT NULL,
+    severity VARCHAR(20) NOT NULL,
+    description TEXT,
+    suggestion TEXT,
+    drug_name VARCHAR(100),
+    related_drugs JSON,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (audit_record_id) REFERENCES audit_record(id)
+);
+
+-- 审核快照表（存储处方原始载荷，便于追溯）
+CREATE TABLE IF NOT EXISTS audit_snapshot (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    audit_record_id BIGINT NOT NULL,
+    prescription_payload JSON NOT NULL,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (audit_record_id) REFERENCES audit_record(id)
+);
+
+-- 审核统计表（按日/月等周期聚合）
+CREATE TABLE IF NOT EXISTS audit_statistics (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    period_date DATE NOT NULL,
+    period_type VARCHAR(20) NOT NULL,
+    total_count INT DEFAULT 0,
+    pass_count INT DEFAULT 0,
+    warning_count INT DEFAULT 0,
+    reject_count INT DEFAULT 0,
+    top_risk_drugs JSON,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_period (period_date, period_type)
+);
+
+-- 审核规则主表
+CREATE TABLE IF NOT EXISTS audit_rule (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    rule_type VARCHAR(50) NOT NULL,
+    severity VARCHAR(20) NOT NULL,
+    enabled TINYINT(1) DEFAULT 1,
+    version VARCHAR(50),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- 审核规则条件
+CREATE TABLE IF NOT EXISTS audit_rule_condition (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    rule_id BIGINT NOT NULL,
+    condition_type VARCHAR(50) NOT NULL,
+    left_value VARCHAR(255),
+    operator VARCHAR(20),
+    right_value VARCHAR(255),
+    metadata JSON,
+    FOREIGN KEY (rule_id) REFERENCES audit_rule(id)
+);
+
+-- 审核规则动作
+CREATE TABLE IF NOT EXISTS audit_rule_action (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    rule_id BIGINT NOT NULL,
+    action_type VARCHAR(50) NOT NULL,
+    message TEXT,
+    suggestion TEXT,
+    FOREIGN KEY (rule_id) REFERENCES audit_rule(id)
+);
+
+-- 药品适应症表
+CREATE TABLE IF NOT EXISTS medicine_indication (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    medicine_id BIGINT NOT NULL,
+    indication VARCHAR(255) NOT NULL,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_medicine_indication (medicine_id, indication),
+    FOREIGN KEY (medicine_id) REFERENCES medicine(id)
+);
+
+-- 药品禁忌/疾病不适宜表
+CREATE TABLE IF NOT EXISTS medicine_contraindication (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    medicine_id BIGINT NOT NULL,
+    contraindication VARCHAR(255) NOT NULL,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_medicine_contra (medicine_id, contraindication),
+    FOREIGN KEY (medicine_id) REFERENCES medicine(id)
+);
+
+-- 药品不良反应表
+CREATE TABLE IF NOT EXISTS medicine_adverse_reaction (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    medicine_id BIGINT NOT NULL,
+    reaction VARCHAR(255) NOT NULL,
+    severity VARCHAR(20),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_medicine_reaction (medicine_id, reaction),
+    FOREIGN KEY (medicine_id) REFERENCES medicine(id)
+);
+
+-- 药品相互作用表
+CREATE TABLE IF NOT EXISTS medicine_interaction (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    medicine_id BIGINT NOT NULL,
+    other_medicine_name VARCHAR(255) NOT NULL,
+    risk_level VARCHAR(20),
+    description TEXT,
+    suggestion TEXT,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_medicine_interaction (medicine_id, other_medicine_name),
+    FOREIGN KEY (medicine_id) REFERENCES medicine(id)
 );
 
 -- 插入默认用户数据（避免重复插入，密码已使用BCrypt加密，明文为"123456"）

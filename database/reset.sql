@@ -5,7 +5,17 @@
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- 清空所有表
+TRUNCATE TABLE audit_issue;
+TRUNCATE TABLE audit_snapshot;
 TRUNCATE TABLE audit_record;
+TRUNCATE TABLE audit_statistics;
+TRUNCATE TABLE audit_rule_condition;
+TRUNCATE TABLE audit_rule_action;
+TRUNCATE TABLE audit_rule;
+TRUNCATE TABLE medicine_interaction;
+TRUNCATE TABLE medicine_contraindication;
+TRUNCATE TABLE medicine_indication;
+TRUNCATE TABLE medicine_adverse_reaction;
 TRUNCATE TABLE prescription_detail;
 TRUNCATE TABLE prescription;
 TRUNCATE TABLE stock_in;
