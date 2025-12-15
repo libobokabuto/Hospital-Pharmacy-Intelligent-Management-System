@@ -2,7 +2,67 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+
+
+@dataclass
+class PatientInfo:
+    """患者基本信息（用于审核输入和存档）"""
+
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    weight: Optional[float] = None
+    conditions: List[str] = field(default_factory=list)
+    allergies: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "age": self.age,
+            "gender": self.gender,
+            "weight": self.weight,
+            "conditions": self.conditions,
+            "allergies": self.allergies,
+        }
+
+
+@dataclass
+class PrescriptionDetail:
+    """处方明细（单个药品条目）"""
+
+    medicine_id: Optional[int]
+    name: str
+    quantity: Optional[int] = None
+    dosage: Optional[str] = None
+    frequency: Optional[str] = None
+    days: Optional[int] = None
+    category: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "medicine_id": self.medicine_id,
+            "name": self.name,
+            "quantity": self.quantity,
+            "dosage": self.dosage,
+            "frequency": self.frequency,
+            "days": self.days,
+            "category": self.category,
+        }
+
+
+@dataclass
+class PrescriptionPayload:
+    """处方审核输入/快照结构"""
+
+    prescription_id: Optional[int]
+    patient: PatientInfo
+    medicines: List[PrescriptionDetail]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "prescription_id": self.prescription_id,
+            "patient": self.patient.to_dict(),
+            "medicines": [m.to_dict() for m in self.medicines],
+        }
 
 
 @dataclass
@@ -131,5 +191,48 @@ class AuditStatistics:
             "warning_count": self.warning_count,
             "reject_count": self.reject_count,
             "top_risk_drugs": self.top_risk_drugs,
+            "created_at": self.created_at,
+        }
+
+
+@dataclass
+class AuditIssueRecord:
+    """与 audit_issue 表对应的结构，用于落库/读取"""
+
+    id: Optional[int]
+    audit_record_id: int
+    issue_type: str
+    severity: str
+    description: Optional[str]
+    suggestion: Optional[str]
+    drug_name: Optional[str]
+    related_drugs: List[str] = field(default_factory=list)
+    created_at: Optional[str] = None
+
+    @classmethod
+    def from_service_issue(cls, audit_record_id: int, issue: Dict[str, Any]) -> "AuditIssueRecord":
+        """构建用于持久化的 Issue 记录；issue 来自审核服务的字典表示。"""
+
+        return cls(
+            id=None,
+            audit_record_id=audit_record_id,
+            issue_type=issue.get("issue_type", "unknown"),
+            severity=issue.get("severity", "unknown"),
+            description=issue.get("description"),
+            suggestion=issue.get("suggestion"),
+            drug_name=issue.get("drug_name"),
+            related_drugs=issue.get("related_drugs") or [],
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "audit_record_id": self.audit_record_id,
+            "issue_type": self.issue_type,
+            "severity": self.severity,
+            "description": self.description,
+            "suggestion": self.suggestion,
+            "drug_name": self.drug_name,
+            "related_drugs": self.related_drugs,
             "created_at": self.created_at,
         }

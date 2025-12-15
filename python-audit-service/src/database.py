@@ -1,12 +1,21 @@
-"""SQLite database helpers for the audit service."""
+"""Database configuration helpers (MySQL-first, SQLite for local debug).
+
+默认使用与 Java 服务共享的 MySQL 数据库：
+- 库名/用户/密码通过环境变量 AUDIT_DB_* 配置
+- 不在此文件执行 MySQL DDL，统一由 database/init.sql 或 Flyway/Liquibase 管理
+
+本地调试可切换 SQLite：设置 AUDIT_DB_ENGINE=sqlite；此时可调用 init_db 生成本地表结构。
+"""
+
 import json
 import os
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Iterator, Optional
+from typing import Optional
 
 import pymysql
+
 
 DB_ENGINE = os.getenv("AUDIT_DB_ENGINE", "mysql").lower()
 
@@ -169,7 +178,11 @@ CREATE TABLE IF NOT EXISTS audit_statistics (
 
 @contextmanager
 def get_connection(db_path: str = DEFAULT_DB_PATH):
-    """Yield a DB connection for the configured engine."""
+    """Yield a DB connection based on DB_ENGINE.
+
+    MySQL: 依赖外部已初始化的 schema（与 Java 共库）。
+    SQLite: 自动创建本地数据目录，并启用 RowFactory 方便字典化读取。
+    """
 
     if DB_ENGINE == "mysql":
         conn = pymysql.connect(**MYSQL_CONFIG)
@@ -190,9 +203,11 @@ def get_connection(db_path: str = DEFAULT_DB_PATH):
 
 
 def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
-    """Create tables if they do not exist (only for sqlite)."""
+    """Create tables if they do not exist (only for sqlite).
+
+    MySQL 场景请使用 database/init.sql 或现有迁移工具，确保与 Java 服务的表结构一致。
+    """
     if DB_ENGINE == "mysql":
-        # MySQL 由外部迁移脚本管理（与 Java 模块共用），这里不做 DDL
         return
     with get_connection(db_path) as conn:
         conn.executescript(DDL_STATEMENTS)

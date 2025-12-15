@@ -25,3 +25,8 @@ replay_pid*
 
 # venv
 *.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+python-audit-service/**/__pycache__/
