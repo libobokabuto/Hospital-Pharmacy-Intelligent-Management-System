@@ -107,6 +107,9 @@ class AuditResource(Resource):
         logger.error(f"审核结果持久化失败: {e}", exc_info=True)
         record_id = None
 
+      # 将suggestions列表转换为字符串（用分号连接）
+      suggestions_str = '; '.join(audit_report.suggestions) if audit_report.suggestions else ''
+      
       result = {
         'success': True,
         'data': {
@@ -123,7 +126,7 @@ class AuditResource(Resource):
             }
             for issue in audit_report.issues
           ],
-          'suggestions': audit_report.suggestions,
+          'suggestions': suggestions_str,
           'audit_time': audit_report.audit_time,
           'audit_record_id': record_id,
         },
@@ -168,8 +171,8 @@ class AuditResource(Resource):
     record = AuditRecord(
       id=None,
       prescription_id=prescription_data.get('prescription_id') or prescription_data.get('id') or 0,
-      audit_type='自动审核',
-      audit_result=audit_report.result.value,
+      audit_type='auto',  # 使用ENUM值：'auto'=自动审核, 'manual'=人工审核
+      audit_result=audit_report.result.value,  # 已经是ENUM值：'pass'/'warning'/'reject'
       audit_score=audit_report.score,
       issues_found=issues_dicts,
       suggestions=audit_report.suggestions,
@@ -239,6 +242,9 @@ class BatchAuditResource(Resource):
           logger.error(f"批量审核持久化失败: {e}", exc_info=True)
           record_id = None
 
+        # 将suggestions列表转换为字符串（用分号连接）
+        suggestions_str = '; '.join(audit_report.suggestions) if audit_report.suggestions else ''
+        
         results.append({
           'result': audit_report.result.value,
           'score': audit_report.score,
@@ -253,7 +259,7 @@ class BatchAuditResource(Resource):
             }
             for issue in audit_report.issues
           ],
-          'suggestions': audit_report.suggestions,
+          'suggestions': suggestions_str,
           'audit_time': audit_report.audit_time,
           'audit_record_id': record_id,
           'prescription_id': pres.get('prescription_id') or pres.get('id')
@@ -284,8 +290,8 @@ class BatchAuditResource(Resource):
     record = AuditRecord(
       id=None,
       prescription_id=prescription_data.get('prescription_id') or prescription_data.get('id') or 0,
-      audit_type='自动审核',
-      audit_result=audit_report.result.value,
+      audit_type='auto',  # 使用ENUM值：'auto'=自动审核, 'manual'=人工审核
+      audit_result=audit_report.result.value,  # 已经是ENUM值：'pass'/'warning'/'reject'
       audit_score=audit_report.score,
       issues_found=issues_dicts,
       suggestions=audit_report.suggestions,

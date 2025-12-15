@@ -30,7 +30,7 @@ MYSQL_CONFIG = {
     "host": os.getenv("AUDIT_DB_HOST", "localhost"),
     "port": int(os.getenv("AUDIT_DB_PORT", "3306")),
     "user": os.getenv("AUDIT_DB_USER", "root"),
-    "password": os.getenv("AUDIT_DB_PASSWORD", "040918"),
+    "password": os.getenv("AUDIT_DB_PASSWORD", "20050129"),
     "database": os.getenv("AUDIT_DB_NAME", "hpims"),
     "charset": "utf8mb4",
     "cursorclass": pymysql.cursors.DictCursor,

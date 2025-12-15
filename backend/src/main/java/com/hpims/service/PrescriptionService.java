@@ -18,7 +18,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -179,18 +178,21 @@ public class PrescriptionService {
             logger.info("开始调用Python审核服务，处方ID: {}", prescriptionId);
             AuditResultDto auditResult = auditServiceClient.auditPrescription(prescription, details, medicines);
 
-            // 将Python返回的结果转换为中文状态
+            // 将Python返回的结果转换为中文状态（用于显示）
             String auditResultStatus = convertAuditResultToStatus(auditResult.getResult());
             String prescriptionStatus = convertAuditResultToPrescriptionStatus(auditResult.getResult());
+            
+            // 获取ENUM值（用于保存到数据库）
+            String auditResultEnum = auditResult.getResult().toLowerCase(); // 'pass'/'warning'/'reject'
 
             // 构建问题描述
             String issuesFound = buildIssuesDescription(auditResult.getIssues());
 
-            // 保存审核记录
+            // 保存审核记录（使用ENUM值）
             AuditRecord auditRecord = AuditRecord.builder()
                     .prescriptionId(prescriptionId)
-                    .auditType("自动审核")
-                    .auditResult(auditResultStatus)
+                    .auditType("auto")  // 使用ENUM值：'auto'=自动审核, 'manual'=人工审核
+                    .auditResult(auditResultEnum)  // 使用ENUM值：'pass'/'warning'/'reject'
                     .auditScore(auditResult.getScore() != null 
                             ? BigDecimal.valueOf(auditResult.getScore()) 
                             : null)
@@ -324,11 +326,21 @@ public class PrescriptionService {
 
     /**
      * 生成处方号
+     * 格式: RX + 8位日期(yyyyMMdd) + 3位序号
+     * 示例: RX20250101001
      */
     private String generatePrescriptionNumber() {
-        // 格式: P + 日期(yyyyMMdd) + 随机字符串
+        // 格式: RX + 8位日期(yyyyMMdd) + 3位序号
         String dateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String randomStr = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        return "P" + dateStr + randomStr;
+        String prefix = "RX" + dateStr;
+        
+        // 查询当天已有的处方数量，生成序号
+        List<Prescription> todayPrescriptions = prescriptionRepository.findByPrescriptionNumberStartingWith(prefix);
+        int sequence = todayPrescriptions.size() + 1; // 序号从001开始
+        
+        // 格式化为3位序号（001, 002, 003...）
+        String sequenceStr = String.format("%03d", sequence);
+        
+        return prefix + sequenceStr;
     }
 }

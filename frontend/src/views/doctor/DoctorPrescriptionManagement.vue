@@ -65,10 +65,20 @@
             {{ formatDate(row.createDate) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleView(row)">
               查看
+            </el-button>
+            <el-button
+              v-if="row.status === '未审核'"
+              type="success"
+              size="small"
+              @click="handleAutoAudit(row)"
+              :loading="autoAuditingId === row.id"
+            >
+              <el-icon><Check /></el-icon>
+              自动审核
             </el-button>
             <el-button
               v-if="row.status === '未审核'"
@@ -268,17 +278,154 @@
 
         <h3 style="margin-top: 20px; margin-bottom: 10px">审核历史</h3>
         <el-table :data="auditHistory" style="width: 100%">
-          <el-table-column prop="auditType" label="审核类型" width="120" />
-          <el-table-column prop="auditResult" label="审核结果" width="120" />
-          <el-table-column prop="auditScore" label="得分" width="100" />
+          <el-table-column prop="auditType" label="审核类型" width="120">
+            <template #default="{ row }">
+              <el-tag :type="row.auditType === 'auto' || row.auditType === '自动审核' ? 'info' : 'warning'">
+                {{ row.auditType === 'auto' ? '自动审核' : row.auditType === 'manual' ? '人工审核' : row.auditType }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="auditResult" label="审核结果" width="120">
+            <template #default="{ row }">
+              <el-tag :type="getAuditResultTagType(row.auditResult)">
+                {{ row.auditResult }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="auditScore" label="得分" width="100">
+            <template #default="{ row }">
+              <span style="font-weight: bold">{{ row.auditScore || 'N/A' }}</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="auditor" label="审核人" width="120" />
           <el-table-column prop="auditTime" label="审核时间" width="180">
             <template #default="{ row }">
               {{ formatDateTime(row.auditTime) }}
             </template>
           </el-table-column>
+          <el-table-column label="详情" width="100">
+            <template #default="{ row }">
+              <el-button type="text" size="small" @click="showAuditDetail(row)">
+                查看详情
+              </el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </div>
+    </el-dialog>
+
+    <!-- 自动审核结果对话框 -->
+    <el-dialog v-model="auditResultDialogVisible" title="自动审核结果" width="700px">
+      <div v-if="auditResult">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="审核类型">
+            <el-tag type="info">{{ auditResult.auditType || '自动审核' }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="审核结果">
+            <el-tag :type="getAuditResultTagType(auditResult.auditResult)">
+              {{ auditResult.auditResult }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="审核得分">
+            <span style="font-size: 18px; font-weight: bold; color: #409EFF">
+              {{ auditResult.auditScore || 'N/A' }}
+            </span>
+          </el-descriptions-item>
+          <el-descriptions-item label="审核时间">
+            {{ formatDateTime(auditResult.auditTime) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="审核人" :span="2">
+            {{ auditResult.auditor || '系统' }}
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <el-divider content-position="left">发现问题</el-divider>
+        <div v-if="auditResult.issuesFound" style="margin-bottom: 20px">
+          <el-alert
+            :title="auditResult.issuesFound"
+            :type="getAuditResultAlertType(auditResult.auditResult)"
+            :closable="false"
+            show-icon
+          />
+        </div>
+        <div v-else style="margin-bottom: 20px">
+          <el-alert title="未发现问题" type="success" :closable="false" show-icon />
+        </div>
+
+        <el-divider content-position="left">审核建议</el-divider>
+        <div v-if="auditResult.suggestions" style="margin-bottom: 20px">
+          <el-alert
+            :title="auditResult.suggestions"
+            type="info"
+            :closable="false"
+            show-icon
+          />
+        </div>
+        <div v-else>
+          <el-alert title="无特殊建议" type="info" :closable="false" />
+        </div>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="auditResultDialogVisible = false">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 审核详情对话框 -->
+    <el-dialog v-model="auditDetailDialogVisible" title="审核详情" width="700px">
+      <div v-if="currentAuditRecord">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="审核类型">
+            <el-tag :type="currentAuditRecord.auditType === 'auto' || currentAuditRecord.auditType === '自动审核' ? 'info' : 'warning'">
+              {{ currentAuditRecord.auditType === 'auto' ? '自动审核' : currentAuditRecord.auditType === 'manual' ? '人工审核' : currentAuditRecord.auditType }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="审核结果">
+            <el-tag :type="getAuditResultTagType(currentAuditRecord.auditResult)">
+              {{ currentAuditRecord.auditResult }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="审核得分">
+            <span style="font-size: 18px; font-weight: bold; color: #409EFF">
+              {{ currentAuditRecord.auditScore || 'N/A' }}
+            </span>
+          </el-descriptions-item>
+          <el-descriptions-item label="审核时间">
+            {{ formatDateTime(currentAuditRecord.auditTime) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="审核人" :span="2">
+            {{ currentAuditRecord.auditor || '系统' }}
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <el-divider content-position="left">发现问题</el-divider>
+        <div v-if="currentAuditRecord.issuesFound" style="margin-bottom: 20px">
+          <el-alert
+            :title="currentAuditRecord.issuesFound"
+            :type="getAuditResultAlertType(currentAuditRecord.auditResult)"
+            :closable="false"
+            show-icon
+          />
+        </div>
+        <div v-else style="margin-bottom: 20px">
+          <el-alert title="未发现问题" type="success" :closable="false" show-icon />
+        </div>
+
+        <el-divider content-position="left">审核建议</el-divider>
+        <div v-if="currentAuditRecord.suggestions" style="margin-bottom: 20px">
+          <el-alert
+            :title="currentAuditRecord.suggestions"
+            type="info"
+            :closable="false"
+            show-icon
+          />
+        </div>
+        <div v-else>
+          <el-alert title="无特殊建议" type="info" :closable="false" />
+        </div>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="auditDetailDialogVisible = false">确定</el-button>
+      </template>
     </el-dialog>
   </div>
 </template>
@@ -287,7 +434,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { prescriptionAPI, medicineAPI } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Delete, Printer } from '@element-plus/icons-vue'
+import { Plus, Search, Delete, Printer, Check } from '@element-plus/icons-vue'
 import { formatDate } from '@/utils/format'
 import { useUserStore } from '@/stores/user'
 
@@ -296,6 +443,11 @@ const detailDialogVisible = ref(false)
 const currentPrescription = ref(null)
 const prescriptionDetails = ref([])
 const auditHistory = ref([])
+const autoAuditingId = ref(null)
+const auditResultDialogVisible = ref(false)
+const auditResult = ref(null)
+const auditDetailDialogVisible = ref(false)
+const currentAuditRecord = ref(null)
 
 const searchForm = reactive({
   status: '',
@@ -325,6 +477,24 @@ const getStatusTagType = (status) => {
     '已取消': 'info',
   }
   return typeMap[status] || ''
+}
+
+const getAuditResultTagType = (result) => {
+  if (!result) return 'info'
+  const resultLower = result.toLowerCase()
+  if (resultLower.includes('通过') || resultLower === 'pass') return 'success'
+  if (resultLower.includes('警告') || resultLower === 'warning') return 'warning'
+  if (resultLower.includes('拒绝') || resultLower === 'reject') return 'danger'
+  return 'info'
+}
+
+const getAuditResultAlertType = (result) => {
+  if (!result) return 'info'
+  const resultLower = result.toLowerCase()
+  if (resultLower.includes('通过') || resultLower === 'pass') return 'success'
+  if (resultLower.includes('警告') || resultLower === 'warning') return 'warning'
+  if (resultLower.includes('拒绝') || resultLower === 'reject') return 'error'
+  return 'info'
 }
 
 const loadPrescriptions = async () => {
@@ -597,6 +767,11 @@ const handleSubmitPrescription = async () => {
   }
 }
 
+const showAuditDetail = (row) => {
+  currentAuditRecord.value = row
+  auditDetailDialogVisible.value = true
+}
+
 const handleView = async (row) => {
   currentPrescription.value = row
   try {
@@ -613,6 +788,76 @@ const handleView = async (row) => {
     detailDialogVisible.value = true
   } catch (error) {
     ElMessage.error('加载处方详情失败')
+  }
+}
+
+const handleAutoAudit = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要提交处方"${row.prescriptionNumber}"进行自动审核吗？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'info',
+      }
+    )
+
+    autoAuditingId.value = row.id
+    try {
+      const response = await prescriptionAPI.submitForAudit(row.id)
+      if (response.success) {
+        ElMessage.success('自动审核提交成功，正在审核中...')
+        // 等待1秒后刷新列表，让后端有时间处理
+        setTimeout(() => {
+          loadPrescriptions()
+          // 加载审核结果
+          loadAuditResult(row.id)
+        }, 1000)
+      } else {
+        ElMessage.error(response.message || '提交自动审核失败')
+      }
+    } catch (error) {
+      console.error('自动审核错误:', error)
+      ElMessage.error('提交自动审核失败: ' + (error.message || '未知错误'))
+    } finally {
+      autoAuditingId.value = null
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('自动审核错误:', error)
+    }
+  }
+}
+
+const loadAuditResult = async (prescriptionId) => {
+  try {
+    // 等待2秒让后端处理完成
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    const historyResponse = await prescriptionAPI.getAuditHistory(prescriptionId)
+    if (historyResponse.success && historyResponse.data && historyResponse.data.length > 0) {
+      // 获取最新的自动审核记录
+      const autoAuditRecord = historyResponse.data
+        .filter(r => r.auditType === 'auto' || r.auditType === '自动审核')
+        .sort((a, b) => {
+          const timeA = new Date(a.auditTime || a.createTime || 0)
+          const timeB = new Date(b.auditTime || b.createTime || 0)
+          return timeB - timeA
+        })[0]
+      
+      if (autoAuditRecord) {
+        auditResult.value = autoAuditRecord
+        auditResultDialogVisible.value = true
+      } else {
+        ElMessage.info('审核结果尚未生成，请稍后查看')
+      }
+    } else {
+      ElMessage.info('审核结果尚未生成，请稍后查看')
+    }
+  } catch (error) {
+    console.error('加载审核结果失败:', error)
+    ElMessage.warning('加载审核结果失败，请稍后手动查看')
   }
 }
 
