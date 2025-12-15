@@ -8,6 +8,8 @@ through json_dumps/json_loads to keep consistency across engines.
 from __future__ import annotations
 
 from typing import Any, Callable, ContextManager, Dict, List, Optional, Tuple
+from decimal import Decimal
+from datetime import datetime, date
 
 try:
     # Preferred path when imported as a package
@@ -339,27 +341,44 @@ class AuditRecordDAO(BaseDAO):
 
         history: List[AuditRecord] = []
         for row in rows:
+            issues_found = self._to_primitive(json_loads(row.get("issues_found")))
+            suggestions = self._to_primitive(json_loads(row.get("suggestions")) or [])
+            patient_conditions = self._to_primitive(json_loads(row.get("patient_conditions")) or [])
+            patient_allergies = self._to_primitive(json_loads(row.get("patient_allergies")) or [])
             history.append(
                 AuditRecord(
                     id=row["id"],
                     prescription_id=row["prescription_id"],
                     audit_type=row.get("audit_type"),
                     audit_result=row.get("audit_result"),
-                    audit_score=row.get("audit_score"),
-                    issues_found=json_loads(row.get("issues_found")),
-                    suggestions=json_loads(row.get("suggestions")) or [],
+                    audit_score=self._to_primitive(row.get("audit_score")),
+                    issues_found=issues_found,
+                    suggestions=suggestions,
                     auditor=row.get("auditor"),
-                    patient_age=row.get("patient_age"),
+                    patient_age=self._to_primitive(row.get("patient_age")),
                     patient_gender=row.get("patient_gender"),
-                    patient_conditions=json_loads(row.get("patient_conditions")) or [],
-                    patient_allergies=json_loads(row.get("patient_allergies")) or [],
+                    patient_conditions=patient_conditions,
+                    patient_allergies=patient_allergies,
                     rule_version=row.get("rule_version"),
                     engine_version=row.get("engine_version"),
-                    audit_time=row.get("audit_time"),
-                    created_at=row.get("create_time"),
+                    audit_time=self._to_primitive(row.get("audit_time")),
+                    created_at=self._to_primitive(row.get("create_time")),
                 )
             )
         return history
+
+    @staticmethod
+    def _to_primitive(obj: Any) -> Any:
+        """Recursively convert Decimal/datetime/date to JSON-friendly primitives."""
+        if isinstance(obj, Decimal):
+            return float(obj)
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat(sep=" ") if isinstance(obj, datetime) else obj.isoformat()
+        if isinstance(obj, list):
+            return [AuditRecordDAO._to_primitive(i) for i in obj]
+        if isinstance(obj, dict):
+            return {k: AuditRecordDAO._to_primitive(v) for k, v in obj.items()}
+        return obj
 
 
 class AuditStatisticsDAO(BaseDAO):

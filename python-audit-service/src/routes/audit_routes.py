@@ -68,7 +68,7 @@ TODO: 添加缓存机制
 """
 
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from flask import request, jsonify
 from flask_restful import Resource, reqparse
@@ -191,3 +191,138 @@ class AuditResource(Resource):
     self.audit_record_dao.bulk_insert_issues(issues_records)
     self.audit_record_dao.insert_snapshot(record_id, prescription_data)
     return record_id
+
+
+class BatchAuditResource(Resource):
+  """批量审核资源"""
+
+  def __init__(self, audit_service: AuditService, audit_record_dao: AuditRecordDAO):
+    self.audit_service = audit_service
+    self.audit_record_dao = audit_record_dao
+
+  def post(self):
+    try:
+      data = request.get_json()
+      if not data:
+        return {'success': False, 'message': '请求数据不能为空'}, 400
+
+      prescriptions = data.get('prescriptions') or []
+      if not isinstance(prescriptions, list) or not prescriptions:
+        return {'success': False, 'message': 'prescriptions 列表不能为空'}, 400
+
+      results = []
+      for pres in prescriptions:
+        audit_report = self.audit_service.audit_prescription(pres)
+        try:
+          record_id = self._persist_audit_result(pres, audit_report)
+        except Exception as e:
+          logger.error(f"批量审核持久化失败: {e}", exc_info=True)
+          record_id = None
+
+        results.append({
+          'result': audit_report.result.value,
+          'score': audit_report.score,
+          'issues': [
+            {
+              'issue_type': issue.issue_type,
+              'severity': issue.severity.value,
+              'description': issue.description,
+              'suggestion': issue.suggestion,
+              'drug_name': issue.drug_name,
+              'related_drugs': issue.related_drugs,
+            }
+            for issue in audit_report.issues
+          ],
+          'suggestions': audit_report.suggestions,
+          'audit_time': audit_report.audit_time,
+          'audit_record_id': record_id,
+          'prescription_id': pres.get('prescription_id') or pres.get('id')
+        })
+
+      return {'success': True, 'data': {'results': results, 'total': len(results)}}, 200
+
+    except Exception as e:
+      logger.error(f"批量审核失败: {str(e)}", exc_info=True)
+      return {'success': False, 'message': f'批量审核失败: {str(e)}'}, 500
+
+  def _persist_audit_result(self, prescription_data: Dict[str, Any], audit_report):
+    patient = prescription_data.get('patient', {}) or {}
+    issues_dicts: List[Dict[str, Any]] = [
+      {
+        'issue_type': issue.issue_type,
+        'severity': issue.severity.value,
+        'description': issue.description,
+        'suggestion': issue.suggestion,
+        'drug_name': issue.drug_name,
+        'related_drugs': issue.related_drugs,
+      }
+      for issue in audit_report.issues
+    ]
+
+    audit_time_db = audit_report.audit_time.replace("T", " ").split(".")[0]
+
+    record = AuditRecord(
+      id=None,
+      prescription_id=prescription_data.get('prescription_id') or prescription_data.get('id') or 0,
+      audit_type='自动审核',
+      audit_result=audit_report.result.value,
+      audit_score=audit_report.score,
+      issues_found=issues_dicts,
+      suggestions=audit_report.suggestions,
+      auditor='system',
+      patient_age=patient.get('age'),
+      patient_gender=patient.get('gender'),
+      patient_conditions=patient.get('conditions', []),
+      patient_allergies=patient.get('allergies', []),
+      rule_version=None,
+      engine_version='python-audit-service/1.0.0',
+      audit_time=audit_time_db,
+    )
+
+    record_id = self.audit_record_dao.insert_record(record)
+    issues_records = [
+      AuditIssueRecord.from_service_issue(record_id, issue_dict)
+      for issue_dict in issues_dicts
+    ]
+    self.audit_record_dao.bulk_insert_issues(issues_records)
+    self.audit_record_dao.insert_snapshot(record_id, prescription_data)
+    return record_id
+
+
+class AuditHistoryResource(Resource):
+  """审核历史查询"""
+
+  def __init__(self, audit_record_dao: AuditRecordDAO):
+    self.audit_record_dao = audit_record_dao
+
+  def get(self, prescription_id: Optional[int] = None):
+    try:
+      limit = request.args.get('limit', default=50, type=int)
+      records = self.audit_record_dao.list_history(prescription_id=prescription_id, limit=limit)
+      return {
+        'success': True,
+        'data': [
+          {
+            'id': r.id,
+            'prescription_id': r.prescription_id,
+            'audit_type': r.audit_type,
+            'audit_result': r.audit_result,
+            'audit_score': r.audit_score,
+            'issues_found': r.issues_found,
+            'suggestions': r.suggestions,
+            'auditor': r.auditor,
+            'patient_age': r.patient_age,
+            'patient_gender': r.patient_gender,
+            'patient_conditions': r.patient_conditions,
+            'patient_allergies': r.patient_allergies,
+            'rule_version': r.rule_version,
+            'engine_version': r.engine_version,
+            'audit_time': r.audit_time,
+            'create_time': r.created_at,
+          }
+          for r in records
+        ]
+      }, 200
+    except Exception as e:
+      logger.error(f"查询审核历史失败: {str(e)}", exc_info=True)
+      return {'success': False, 'message': f'查询审核历史失败: {str(e)}'}, 500

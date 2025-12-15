@@ -54,7 +54,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from config.settings import Config
-from src.routes.audit_routes import AuditResource
+from src.routes.audit_routes import AuditResource, BatchAuditResource, AuditHistoryResource
 from src.dao.repositories import AuditRecordDAO
 from src.services.audit_service import AuditService
 
@@ -92,6 +92,24 @@ def create_app(config_class=Config):
         '/prescription/audit',
         resource_class_kwargs={
             'audit_service': audit_service,
+            'audit_record_dao': audit_record_dao,
+        }
+    )
+
+    api.add_resource(
+        BatchAuditResource,
+        '/prescription/batch-audit',
+        resource_class_kwargs={
+            'audit_service': audit_service,
+            'audit_record_dao': audit_record_dao,
+        }
+    )
+
+    api.add_resource(
+        AuditHistoryResource,
+        '/audit/history',
+        '/audit/history/<int:prescription_id>',
+        resource_class_kwargs={
             'audit_record_dao': audit_record_dao,
         }
     )
