@@ -75,13 +75,15 @@ class MedicineDAO(BaseDAO):
             approval_number=row.get("approval_number"),
             price=row.get("price", 0.0),
             stock_quantity=row.get("stock_quantity", 0),
+            recommended_single_dose=row.get("recommended_single_dose"),
+            recommended_daily_dose=row.get("recommended_daily_dose"),
             created_at=row.get("create_time") or row.get("created_at"),
         )
 
     def get_by_id(self, medicine_id: int) -> Optional[Medicine]:
         sql = (
             "SELECT id, name, generic_name, specification, manufacturer, category, "
-            "approval_number, price, stock_quantity, create_time FROM medicine WHERE id = "
+            "approval_number, price, stock_quantity, recommended_single_dose, recommended_daily_dose, create_time FROM medicine WHERE id = "
             f"{self._ph}"
         )
         with self.conn_factory() as conn:
@@ -103,7 +105,7 @@ class MedicineDAO(BaseDAO):
         pattern = f"%{keyword}%"
         sql = (
             "SELECT id, name, generic_name, specification, manufacturer, category, "
-            "approval_number, price, stock_quantity, create_time "
+            "approval_number, price, stock_quantity, recommended_single_dose, recommended_daily_dose, create_time "
             "FROM medicine WHERE name LIKE {ph} OR generic_name LIKE {ph} LIMIT {limit}"
         ).format(ph=self._ph, limit=limit)
 
@@ -193,6 +195,36 @@ class MedicineDAO(BaseDAO):
 
         return bundle
 
+    def get_recommended_limits(self, medicine_ids: List[int]) -> Dict[int, Dict[str, Optional[float]]]:
+        if not medicine_ids:
+            return {}
+        placeholders = self._in_clause(medicine_ids)
+        sql = (
+            f"SELECT id, recommended_single_dose, recommended_daily_dose FROM medicine WHERE id IN ({placeholders})"
+        )
+        with self.conn_factory() as conn:
+            cur = conn.cursor()
+            cur.execute(sql, medicine_ids)
+            rows = cur.fetchall() or []
+        return {
+            row["id"]: {
+                "single": row.get("recommended_single_dose"),
+                "daily": row.get("recommended_daily_dose"),
+            }
+            for row in rows
+        }
+
+    def get_specifications(self, medicine_ids: List[int]) -> Dict[int, str]:
+        if not medicine_ids:
+            return {}
+        placeholders = self._in_clause(medicine_ids)
+        sql = f"SELECT id, specification FROM medicine WHERE id IN ({placeholders})"
+        with self.conn_factory() as conn:
+            cur = conn.cursor()
+            cur.execute(sql, medicine_ids)
+            rows = cur.fetchall() or []
+        return {row["id"]: row.get("specification") for row in rows}
+
 
 class PrescriptionDAO(BaseDAO):
     """Read prescription header/detail from shared DB for auditing."""
@@ -203,7 +235,7 @@ class PrescriptionDAO(BaseDAO):
 
     def get_with_details(self, prescription_id: int) -> Optional[PrescriptionPayload]:
         sql_pres = (
-            "SELECT id, patient_age, patient_gender FROM prescription WHERE id = "
+            "SELECT id, patient_age, patient_gender, patient_conditions, patient_name FROM prescription WHERE id = "
             f"{self._ph}"
         )
         with self.conn_factory() as conn:
@@ -217,7 +249,7 @@ class PrescriptionDAO(BaseDAO):
                 age=header.get("patient_age"),
                 gender=header.get("patient_gender"),
                 weight=None,
-                conditions=[],
+                conditions=json_loads(header.get("patient_conditions")) or [],
                 allergies=[],
             )
 
@@ -253,7 +285,7 @@ class PrescriptionDAO(BaseDAO):
             ]
 
     def search(self,
-               patient_name: Optional[str] = None,
+            patient_name: Optional[str] = None,
                doctor_name: Optional[str] = None,
                department: Optional[str] = None,
                status: Optional[str] = None,
@@ -287,7 +319,7 @@ class PrescriptionDAO(BaseDAO):
             params.append(date_to)
 
         sql = (
-            "SELECT id, prescription_number, patient_name, patient_age, patient_gender, doctor_name, department, create_date, status "
+            "SELECT id, prescription_number, patient_name, patient_age, patient_gender, patient_conditions, doctor_name, department, create_date, status "
             f"FROM prescription WHERE {' AND '.join(where)} ORDER BY create_date DESC, id DESC LIMIT {limit}"
         )
 
@@ -302,7 +334,7 @@ class PrescriptionDAO(BaseDAO):
                 age=self._to_primitive(row.get("patient_age")),
                 gender=row.get("patient_gender"),
                 weight=None,
-                conditions=[],
+                conditions=json_loads(row.get("patient_conditions")) or [],
                 allergies=[],
             )
             payload = PrescriptionPayload(
@@ -320,6 +352,21 @@ class PrescriptionDAO(BaseDAO):
             results.append(payload)
 
         return results
+
+    def update_audit_result(self, prescription_id: int, result: str, audit_time: str, status: Optional[str] = None, audit_result_text: Optional[str] = None):
+        """更新处方表的审核状态与结果。"""
+        if not prescription_id:
+            return
+        status_val = status or '已审核'
+        audit_text = audit_result_text or result
+        sql = (
+            f"UPDATE prescription SET status = {self._ph}, audit_result = {self._ph}, audit_time = {self._ph} "
+            "WHERE id = " + self._ph
+        )
+        with self.conn_factory() as conn:
+            cur = conn.cursor()
+            cur.execute(sql, (status_val, audit_text, audit_time, prescription_id))
+            conn.commit()
 
     @staticmethod
     def _to_primitive(obj: Any) -> Any:

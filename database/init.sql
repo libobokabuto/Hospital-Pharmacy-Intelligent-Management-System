@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS medicine (
     min_stock INT DEFAULT 10,
     category VARCHAR(50),
     approval_number VARCHAR(50),
+    recommended_single_dose DECIMAL(10,2),
+    recommended_daily_dose DECIMAL(10,2),
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -62,6 +64,7 @@ CREATE TABLE IF NOT EXISTS prescription (
     patient_name VARCHAR(50) NOT NULL,
     patient_age INT,
     patient_gender VARCHAR(10),
+    patient_conditions JSON,
     doctor_name VARCHAR(50),
     department VARCHAR(50),
     create_date DATE NOT NULL,

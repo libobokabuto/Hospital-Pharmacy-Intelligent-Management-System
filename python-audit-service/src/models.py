@@ -89,6 +89,8 @@ class Medicine:
     approval_number: Optional[str] = None
     price: float = 0.0
     stock_quantity: int = 0
+    recommended_single_dose: Optional[float] = None
+    recommended_daily_dose: Optional[float] = None
     indications: List[str] = field(default_factory=list)
     contraindications: List[str] = field(default_factory=list)
     adverse_reactions: List[Dict[str, Any]] = field(default_factory=list)
@@ -106,6 +108,8 @@ class Medicine:
             "approval_number": self.approval_number,
             "price": self.price,
             "stock_quantity": self.stock_quantity,
+            "recommended_single_dose": self.recommended_single_dose,
+            "recommended_daily_dose": self.recommended_daily_dose,
             "indications": self.indications,
             "contraindications": self.contraindications,
             "adverse_reactions": self.adverse_reactions,

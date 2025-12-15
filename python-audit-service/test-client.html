@@ -21,10 +21,10 @@
     <h2>单笔审核 POST /api/prescription/audit</h2>
     <textarea id="single-body">{
   "prescription": {
-    "prescription_id": 101,
-    "patient": {"age": 45, "gender": "M"},
+    "prescription_id": 201,
+    "patient": {"age": 35, "gender": "M", "conditions": ["胃溃疡"]},
     "medicines": [
-      {"medicine_id": 1, "name": "阿莫西林胶囊", "quantity": 2, "dosage": "每次2粒", "frequency": "每日3次", "days": 7, "category": "抗生素"}
+      {"medicine_id": 102, "name": "布洛芬缓释胶囊", "quantity": 1, "dosage": "每次2粒", "frequency": "每日3次", "days": 5, "category": "解热镇痛"}
     ]
   }
 }</textarea>
@@ -37,9 +37,16 @@
   "prescriptions": [
     {
       "prescription_id": 201,
-      "patient": {"age": 60, "gender": "F"},
+      "patient": {"age": 35, "gender": "M", "conditions": ["胃溃疡"]},
       "medicines": [
-        {"medicine_id": 2, "name": "布洛芬缓释胶囊", "quantity": 1, "dosage": "每次1粒", "frequency": "每日2次", "days": 5, "category": "解热镇痛"}
+        {"medicine_id": 102, "name": "布洛芬缓释胶囊", "quantity": 1, "dosage": "每次2粒", "frequency": "每日3次", "days": 5, "category": "解热镇痛"}
+      ]
+    },
+    {
+      "prescription_id": 202,
+      "patient": {"age": 28, "gender": "F", "conditions": ["维生素C缺乏"]},
+      "medicines": [
+        {"medicine_id": 103, "name": "维生素C片", "quantity": 1, "dosage": "每次1片", "frequency": "每日1次", "days": 7, "category": "维生素"}
       ]
     }
   ]
@@ -61,7 +68,8 @@
   </div>
 
   <div class="card">
-    <h2>处方查询 GET /api/prescriptions</h2>
+    <h2>处方详情 GET /api/prescriptions</h2>
+    <p style="margin:4px 0 8px;">用于取回处方头+明细以便直接传给审核接口。</p>
     <div class="row">
       <label>patient_name
         <input id="q-patient" />
@@ -89,7 +97,7 @@
   </div>
 
   <div class="card">
-    <h2>综合：查询 + 选择审核</h2>
+    <h2>处方查询 GET /api/prescriptions</h2>
     <div class="row">
       <label>patient_name
         <input id="cq-patient" />
@@ -197,33 +205,61 @@
         container.innerHTML = '<div>无数据</div>';
         return;
       }
+
+      const medsDetail = meds => (meds || []).map(m => {
+        const parts = [m.name || ''];
+        if (m.dosage) parts.push(`剂量:${m.dosage}`);
+        if (m.frequency) parts.push(`频次:${m.frequency}`);
+        if (m.days) parts.push(`天数:${m.days}`);
+        if (m.quantity) parts.push(`数量:${m.quantity}`);
+        if (m.medicine_id) parts.push(`ID:${m.medicine_id}`);
+        return parts.join(' | ');
+      }).join('<br/>');
+
       const rows = comboData.map((item, idx) => {
-        const meds = (item.medicines || []).map(m => m.name).join('、');
+        const patient = item.patient || {};
+        const conds = Array.isArray(patient.conditions) ? patient.conditions.join('、') : '';
         return `
           <tr>
             <td><input type="checkbox" data-idx="${idx}" /></td>
             <td>${item.prescription_id ?? ''}</td>
             <td>${item.prescription_number ?? ''}</td>
             <td>${item.patient_name ?? ''}</td>
-            <td>${(item.patient && item.patient.age) ?? ''} / ${(item.patient && item.patient.gender) ?? ''}</td>
+            <td>${patient.age ?? ''} / ${patient.gender ?? ''}</td>
+            <td>${conds}</td>
             <td>${item.doctor_name ?? ''}</td>
             <td>${item.department ?? ''}</td>
             <td>${item.status ?? ''}</td>
             <td>${item.create_date ?? ''}</td>
-            <td>${meds}</td>
-            <td><button onclick="auditOne(${idx})">审核</button></td>
+            <td>${medsDetail(item.medicines)}</td>
+            <td>
+              <button onclick="auditOne(${idx})">审核</button>
+              <button onclick="showDetail(${idx})">详情</button>
+            </td>
           </tr>`;
       }).join('');
+
+      const details = comboData.map((item, idx) => `#${idx}:\n${JSON.stringify(item, null, 2)}`).join('\n\n');
 
       container.innerHTML = `
         <table border="1" cellspacing="0" cellpadding="6">
           <thead>
             <tr>
-              <th>选</th><th>ID</th><th>编号</th><th>患者姓名</th><th>患者年龄/性别</th><th>医生</th><th>科室</th><th>状态</th><th>日期</th><th>药品</th><th>操作</th>
+              <th>选</th><th>ID</th><th>编号</th><th>患者姓名</th><th>年龄/性别</th><th>病症</th><th>医生</th><th>科室</th><th>状态</th><th>日期</th><th>药品明细</th><th>操作</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
-        </table>`;
+        </table>
+        <div style="margin-top:8px;">
+          <div style="font-weight:bold;">处方原始数据：</div>
+          <pre style="background:#f0f2f5; padding:8px; max-height:260px; overflow:auto;">${details}</pre>
+        </div>`;
+    }
+
+    function showDetail(idx) {
+      const item = comboData[idx];
+      if (!item) return;
+      document.getElementById('result').textContent = JSON.stringify(item, null, 2);
     }
 
     async function auditOne(idx) {

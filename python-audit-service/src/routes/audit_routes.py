@@ -83,9 +83,10 @@ logger = logging.getLogger(__name__)
 class AuditResource(Resource):
   """处方审核资源"""
 
-  def __init__(self, audit_service: AuditService, audit_record_dao: AuditRecordDAO):
+  def __init__(self, audit_service: AuditService, audit_record_dao: AuditRecordDAO, prescription_dao: PrescriptionDAO):
     self.audit_service = audit_service
     self.audit_record_dao = audit_record_dao
+    self.prescription_dao = prescription_dao
 
   def post(self):
     """审核处方"""
@@ -190,15 +191,34 @@ class AuditResource(Resource):
     ]
     self.audit_record_dao.bulk_insert_issues(issues_records)
     self.audit_record_dao.insert_snapshot(record_id, prescription_data)
+
+    # 同步更新处方表状态/结果
+    pres_id = prescription_data.get('prescription_id') or prescription_data.get('id')
+    if pres_id:
+      status_map = {
+        'pass': '已审核',
+        'warning': '待人工审核',
+        'reject': '已拒绝',
+      }
+      status_val = status_map.get(audit_report.result.value, '已审核')
+      audit_text = '; '.join(audit_report.suggestions) if audit_report.suggestions else audit_report.result.value
+      self.prescription_dao.update_audit_result(
+        prescription_id=pres_id,
+        result=audit_report.result.value,
+        audit_time=audit_time_db,
+        status=status_val,
+        audit_result_text=audit_text,
+      )
     return record_id
 
 
 class BatchAuditResource(Resource):
   """批量审核资源"""
 
-  def __init__(self, audit_service: AuditService, audit_record_dao: AuditRecordDAO):
+  def __init__(self, audit_service: AuditService, audit_record_dao: AuditRecordDAO, prescription_dao: PrescriptionDAO):
     self.audit_service = audit_service
     self.audit_record_dao = audit_record_dao
+    self.prescription_dao = prescription_dao
 
   def post(self):
     try:
@@ -286,6 +306,23 @@ class BatchAuditResource(Resource):
     ]
     self.audit_record_dao.bulk_insert_issues(issues_records)
     self.audit_record_dao.insert_snapshot(record_id, prescription_data)
+
+    pres_id = prescription_data.get('prescription_id') or prescription_data.get('id')
+    if pres_id:
+      status_map = {
+        'pass': '已审核',
+        'warning': '待人工审核',
+        'reject': '已拒绝',
+      }
+      status_val = status_map.get(audit_report.result.value, '已审核')
+      audit_text = '; '.join(audit_report.suggestions) if audit_report.suggestions else audit_report.result.value
+      self.prescription_dao.update_audit_result(
+        prescription_id=pres_id,
+        result=audit_report.result.value,
+        audit_time=audit_time_db,
+        status=status_val,
+        audit_result_text=audit_text,
+      )
     return record_id
 
 

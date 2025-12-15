@@ -95,6 +95,7 @@ def create_app(config_class=Config):
         resource_class_kwargs={
             'audit_service': audit_service,
             'audit_record_dao': audit_record_dao,
+            'prescription_dao': prescription_dao,
         }
     )
 
@@ -104,6 +105,7 @@ def create_app(config_class=Config):
         resource_class_kwargs={
             'audit_service': audit_service,
             'audit_record_dao': audit_record_dao,
+            'prescription_dao': prescription_dao,
         }
     )
 
