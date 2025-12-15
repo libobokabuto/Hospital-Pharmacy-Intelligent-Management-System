@@ -73,7 +73,7 @@ from typing import Dict, Any, List, Optional
 from flask import request, jsonify
 from flask_restful import Resource, reqparse
 
-from src.dao.repositories import AuditRecordDAO
+from src.dao.repositories import AuditRecordDAO, PrescriptionDAO
 from src.models import AuditIssueRecord, AuditRecord
 from src.services.audit_service import AuditService, AuditResult, IssueSeverity
 
@@ -326,3 +326,51 @@ class AuditHistoryResource(Resource):
     except Exception as e:
       logger.error(f"查询审核历史失败: {str(e)}", exc_info=True)
       return {'success': False, 'message': f'查询审核历史失败: {str(e)}'}, 500
+
+
+class PrescriptionQueryResource(Resource):
+  """处方查询（供审核使用）"""
+
+  def __init__(self, prescription_dao: PrescriptionDAO):
+    self.prescription_dao = prescription_dao
+
+  def get(self):
+    try:
+      args = request.args
+      patient_name = args.get('patient_name')
+      doctor_name = args.get('doctor_name')
+      department = args.get('department')
+      status = args.get('status')
+      date_from = args.get('date_from')
+      date_to = args.get('date_to')
+      limit = args.get('limit', default=50, type=int)
+
+      items = self.prescription_dao.search(
+        patient_name=patient_name,
+        doctor_name=doctor_name,
+        department=department,
+        status=status,
+        date_from=date_from,
+        date_to=date_to,
+        limit=limit,
+      )
+
+      data = []
+      for p in items:
+        data.append({
+          'prescription_id': p.prescription_id,
+          'patient_name': getattr(p, 'patient_name', None),
+          'patient': p.patient.to_dict(),
+          'medicines': [m.to_dict() for m in p.medicines],
+          'doctor_name': getattr(p, 'doctor_name', None),
+          'department': getattr(p, 'department', None),
+          'prescription_number': getattr(p, 'prescription_number', None),
+          'create_date': getattr(p, 'create_date', None),
+          'status': getattr(p, 'status', None),
+        })
+
+      return {'success': True, 'data': data, 'total': len(data)}, 200
+
+    except Exception as e:
+      logger.error(f"查询处方失败: {str(e)}", exc_info=True)
+      return {'success': False, 'message': f'查询处方失败: {str(e)}'}, 500

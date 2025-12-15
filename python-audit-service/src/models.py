@@ -56,12 +56,25 @@ class PrescriptionPayload:
     prescription_id: Optional[int]
     patient: PatientInfo
     medicines: List[PrescriptionDetail]
+    # 可选头信息（查询时附加）
+    prescription_number: Optional[str] = None
+    patient_name: Optional[str] = None
+    doctor_name: Optional[str] = None
+    department: Optional[str] = None
+    create_date: Optional[str] = None
+    status: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "prescription_id": self.prescription_id,
             "patient": self.patient.to_dict(),
             "medicines": [m.to_dict() for m in self.medicines],
+            "prescription_number": self.prescription_number,
+            "patient_name": self.patient_name,
+            "doctor_name": self.doctor_name,
+            "department": self.department,
+            "create_date": self.create_date,
+            "status": self.status,
         }
 
 

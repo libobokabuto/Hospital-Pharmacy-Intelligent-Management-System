@@ -37,7 +37,7 @@ TODO: database.py - 数据库连接和操作
   - 数据迁移脚本
   - 数据备份功能
 
-作者: 田纹搭 (Python审核服务负责人)
+作者: 田纹搴 (Python审核服务负责人)
 """
 
 import os
@@ -54,8 +54,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from config.settings import Config
-from src.routes.audit_routes import AuditResource, BatchAuditResource, AuditHistoryResource
-from src.dao.repositories import AuditRecordDAO
+from src.routes.audit_routes import AuditResource, BatchAuditResource, AuditHistoryResource, PrescriptionQueryResource
+from src.dao.repositories import AuditRecordDAO, PrescriptionDAO
 from src.services.audit_service import AuditService
 
 # 配置日志
@@ -71,9 +71,10 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     # 启用CORS
+    # 放宽 CORS 以便 file:// 或本地静态页测试
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["http://localhost:8080"],
+            "origins": ["*"],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"]
         }
@@ -85,6 +86,7 @@ def create_app(config_class=Config):
     # 初始化审核服务与持久化 DAO
     audit_service = AuditService()
     audit_record_dao = AuditRecordDAO()
+    prescription_dao = PrescriptionDAO()
 
     # 注册路由
     api.add_resource(
@@ -111,6 +113,14 @@ def create_app(config_class=Config):
         '/audit/history/<int:prescription_id>',
         resource_class_kwargs={
             'audit_record_dao': audit_record_dao,
+        }
+    )
+
+    api.add_resource(
+        PrescriptionQueryResource,
+        '/prescriptions',
+        resource_class_kwargs={
+            'prescription_dao': prescription_dao,
         }
     )
 

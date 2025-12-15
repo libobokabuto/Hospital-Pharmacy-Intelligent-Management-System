@@ -252,6 +252,86 @@ class PrescriptionDAO(BaseDAO):
                 for row in rows
             ]
 
+    def search(self,
+               patient_name: Optional[str] = None,
+               doctor_name: Optional[str] = None,
+               department: Optional[str] = None,
+               status: Optional[str] = None,
+               date_from: Optional[str] = None,
+               date_to: Optional[str] = None,
+               limit: int = 50) -> List[PrescriptionPayload]:
+        """按患者名/医生名/科室/状态/日期范围筛选处方并附带明细."""
+        where = ["1=1"]
+        params: List[Any] = []
+
+        def like_param(val: str) -> str:
+            return f"%{val}%"
+
+        if patient_name:
+            where.append(f"patient_name LIKE {self._ph}")
+            params.append(like_param(patient_name))
+        if doctor_name:
+            where.append(f"doctor_name LIKE {self._ph}")
+            params.append(like_param(doctor_name))
+        if department:
+            where.append(f"department LIKE {self._ph}")
+            params.append(like_param(department))
+        if status:
+            where.append(f"status = {self._ph}")
+            params.append(status)
+        if date_from:
+            where.append(f"create_date >= {self._ph}")
+            params.append(date_from)
+        if date_to:
+            where.append(f"create_date <= {self._ph}")
+            params.append(date_to)
+
+        sql = (
+            "SELECT id, prescription_number, patient_name, patient_age, patient_gender, doctor_name, department, create_date, status "
+            f"FROM prescription WHERE {' AND '.join(where)} ORDER BY create_date DESC, id DESC LIMIT {limit}"
+        )
+
+        with self.conn_factory() as conn:
+            cur = conn.cursor()
+            cur.execute(sql, tuple(params))
+            rows = cur.fetchall() or []
+
+        results: List[PrescriptionPayload] = []
+        for row in rows:
+            patient = PatientInfo(
+                age=self._to_primitive(row.get("patient_age")),
+                gender=row.get("patient_gender"),
+                weight=None,
+                conditions=[],
+                allergies=[],
+            )
+            payload = PrescriptionPayload(
+                prescription_id=row["id"],
+                patient=patient,
+                medicines=self.list_details(row["id"]),
+            )
+            # 附加头信息
+            payload.prescription_number = row.get("prescription_number")
+            payload.patient_name = row.get("patient_name")
+            payload.doctor_name = row.get("doctor_name")
+            payload.department = row.get("department")
+            payload.create_date = self._to_primitive(row.get("create_date"))
+            payload.status = row.get("status")
+            results.append(payload)
+
+        return results
+
+    @staticmethod
+    def _to_primitive(obj: Any) -> Any:
+        from decimal import Decimal
+        from datetime import date, datetime
+
+        if isinstance(obj, Decimal):
+            return float(obj)
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        return obj
+
 
 class AuditRecordDAO(BaseDAO):
     """Persist audit record + issues + snapshot."""

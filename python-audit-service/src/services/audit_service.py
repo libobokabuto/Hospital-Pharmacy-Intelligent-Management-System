@@ -88,6 +88,7 @@ TODO: 数据质量保证
 """
 
 import logging
+import datetime
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
@@ -192,7 +193,6 @@ class AuditService:
             # 生成建议
             suggestions = self._generate_suggestions(issues, result)
 
-            import datetime
             audit_time = datetime.datetime.now().isoformat()
 
             return AuditReport(
@@ -263,12 +263,13 @@ class AuditService:
         issues = []
         score = 25.0  # 基础分
 
-        age = patient_info.get('age', 0)
-        weight = patient_info.get('weight', 70)  # 默认体重70kg
+        age = self._to_number(patient_info.get('age'), default=0)
+        weight = self._to_number(patient_info.get('weight'), default=70)  # 默认体重70kg
 
         for med in medicines:
             name = med.get('name', '')
-            dosage = med.get('dosage', 0)
+            dosage_raw = med.get('dosage', 0)
+            dosage = self._to_number(dosage_raw, default=0)
             frequency = med.get('frequency', '')
             days = med.get('days', 1)
 
@@ -306,6 +307,27 @@ class AuditService:
                 score -= 5
 
         return max(score, 0), issues
+
+    @staticmethod
+    def _to_number(val: Any, default: float = 0) -> float:
+        import re
+
+        # 直接数值
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            pass
+
+        # 字符串中提取第一个数字（支持整数/小数）
+        if isinstance(val, str):
+            m = re.search(r"[-+]?\d*\.?\d+", val)
+            if m:
+                try:
+                    return float(m.group())
+                except ValueError:
+                    pass
+
+        return default
 
     def _check_drug_interactions(self, medicines: List[Dict[str, Any]]) -> Tuple[float, List[AuditIssue]]:
         """检查药品相互作用"""
