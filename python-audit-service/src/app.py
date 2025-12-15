@@ -41,13 +41,21 @@ TODO: database.py - 数据库连接和操作
 """
 
 import os
+import sys
 import logging
+from pathlib import Path
 from flask import Flask
 from flask_cors import CORS
 from flask_restful import Api
 
+# 保证可以找到 config 和 src 包（直接运行文件时也能工作）
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from config.settings import Config
 from src.routes.audit_routes import AuditResource
+from src.dao.repositories import AuditRecordDAO
 from src.services.audit_service import AuditService
 
 # 配置日志
@@ -74,12 +82,19 @@ def create_app(config_class=Config):
     # 初始化API
     api = Api(app, prefix='/api')
 
-    # 初始化审核服务
+    # 初始化审核服务与持久化 DAO
     audit_service = AuditService()
+    audit_record_dao = AuditRecordDAO()
 
     # 注册路由
-    api.add_resource(AuditResource, '/prescription/audit',
-                     resource_class_kwargs={'audit_service': audit_service})
+    api.add_resource(
+        AuditResource,
+        '/prescription/audit',
+        resource_class_kwargs={
+            'audit_service': audit_service,
+            'audit_record_dao': audit_record_dao,
+        }
+    )
 
     # 健康检查端点
     @app.route('/health')
