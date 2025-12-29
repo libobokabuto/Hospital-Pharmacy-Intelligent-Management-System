@@ -73,7 +73,6 @@ CREATE TABLE IF NOT EXISTS prescription (
     patient_conditions JSON,
     patient_symptoms TEXT COMMENT '患者症状/病症',
     diagnosis VARCHAR(200) COMMENT '诊断',
-    patient_conditions TEXT COMMENT '患者疾病状况',
     allergies TEXT COMMENT '过敏史',
     doctor_name VARCHAR(50),
     department VARCHAR(50),
